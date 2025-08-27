@@ -73,24 +73,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
   const canGenerate = filters.domain && filters.process && filters.stage;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Explore Use Cases</h1>
-        <p className="text-xl text-gray-600">Filter step by step to find the details you need</p>
+    <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="text-center mb-16">
+        <h1 className="text-5xl font-bold text-gray-900 mb-6 font-serif">Explore Use Cases</h1>
+        <p className="text-xl text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
+        <div className="w-24 h-1 gold-accent mx-auto mt-6"></div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+      <div className="bg-white classic-shadow-lg classic-border p-12 mb-12">
+        <div className="grid md:grid-cols-3 gap-8 mb-12">
           {/* Step 1: Domain */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
+          <div className="space-y-4">
+            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
               Step 1: Select a Domain
             </label>
             <div className="relative">
               <select
                 value={filters.domain}
                 onChange={(e) => handleFilterChange('domain', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white pr-10 transition-colors"
+                className="w-full classic-input appearance-none pr-12 font-medium"
               >
                 <option value="">Choose domain...</option>
                 {domains.map(domain => (
@@ -99,13 +100,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
             </div>
           </div>
 
           {/* Step 2: Process */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
+          <div className="space-y-4">
+            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
               Step 2: Select a Process
             </label>
             <div className="relative">
@@ -113,7 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 value={filters.process}
                 onChange={(e) => handleFilterChange('process', e.target.value)}
                 disabled={!filters.domain}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white pr-10 disabled:bg-gray-50 disabled:text-gray-400 transition-colors"
+                className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
               >
                 <option value="">Choose process...</option>
                 {processes.map(process => (
@@ -122,13 +123,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
             </div>
           </div>
 
           {/* Step 3: Stage */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
+          <div className="space-y-4">
+            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
               Step 3: Select a Stage
             </label>
             <div className="relative">
@@ -136,7 +137,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 value={filters.stage}
                 onChange={(e) => handleFilterChange('stage', e.target.value)}
                 disabled={!filters.process}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white pr-10 disabled:bg-gray-50 disabled:text-gray-400 transition-colors"
+                className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
               >
                 <option value="">Choose stage...</option>
                 {stages.map(stage => (
@@ -145,43 +146,43 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-6 justify-center">
           <button
             onClick={resetFilters}
-            className="flex items-center justify-center space-x-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center space-x-3 classic-button-secondary"
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-5 w-5" />
             <span>Reset Filters</span>
           </button>
 
           <button
             onClick={handleGenerateStrategy}
             disabled={!canGenerate || isGenerating}
-            className="flex items-center justify-center space-x-2 px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center justify-center space-x-3 classic-button-primary disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-5 w-5" />
             <span>{isGenerating ? 'Generating Strategy...' : 'Generate My Strategy'}</span>
           </button>
         </div>
 
         {canGenerate && !isGenerating && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-blue-800 text-sm">
+          <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900">
+            <p className="text-blue-900 text-sm font-semibold tracking-wide">
               Ready to generate strategy for: <strong>{filters.domain}</strong> → <strong>{filters.process}</strong> → <strong>{filters.stage}</strong>
             </p>
           </div>
         )}
 
         {isGenerating && (
-          <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-            <div className="flex items-center justify-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <p className="text-blue-800 font-medium">Analyzing your selection and generating AI strategy recommendations...</p>
+          <div className="mt-8 p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 classic-shadow">
+            <div className="flex items-center justify-center space-x-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-3 border-blue-900"></div>
+              <p className="text-blue-900 font-bold tracking-wide">Analyzing your selection and generating AI strategy recommendations...</p>
             </div>
           </div>
         )}
