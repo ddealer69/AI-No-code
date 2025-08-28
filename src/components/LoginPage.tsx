@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://kabdokfowpwrdgywjtfv.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYmRva2Zvd3B3cmRneXdqdGZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzM3NTUsImV4cCI6MjA3MTgwOTc1NX0.8Nt4Lc1TvnotyTXKUHAhq3W14Imx-QfbMpIw1f15pG4'
+  
+);
 
 interface LoginPageProps {
   onShowSignup: () => void;
@@ -19,12 +26,36 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
     setIsLoading(true);
 
     try {
+      // Search for the email in profiles table and get password
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('email, password')
+        .eq('email', email)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      if (!profile) {
+        setError('No account found. Please create a new account.');
+        setIsLoading(false);
+        onShowSignup(); // Move to signup page
+        return;
+      }
+
+      // Match password
+      if (profile.password !== password) {
+        setError('Invalid email or password');
+        setIsLoading(false);
+        return;
+      }
+
+      // If matched, continue to next page
       const success = await login(email, password);
       if (!success) {
-        setError('Invalid email or password');
+        setError('Login failed.');
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -108,14 +139,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
           </form>
 
           <div className="mt-8 border-t border-gray-200 pt-6">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-l-4 border-blue-900">
-              <h4 className="text-sm font-bold text-blue-900 mb-3 uppercase tracking-wide">Demo Credentials:</h4>
-              <div className="space-y-2 text-sm text-blue-800 font-medium">
-                <div>Email: demo@company.com</div>
-                <div>Password: demo123</div>
-              </div>
-            </div>
-            
             <div className="mt-4 text-center">
               <span className="text-sm text-gray-600 font-medium">Don't have an account? </span>
               <button

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { ChevronDown, RotateCcw, Sparkles } from 'lucide-react';
-import { DOMAIN_DATA, MATCHED_USE_CASES, AI_USE_CASES, REAL_USE_CASES } from '../data/demoData';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, RotateCcw, Sparkles, Save, Database } from 'lucide-react';
+import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
+import { saveToLocalStorage } from '../utils/jsonStorage';
+import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
 
 interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
@@ -9,29 +11,154 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
   const [filters, setFilters] = useState<FilterData>({
+    sector: '',
     domain: '',
     process: '',
     stage: ''
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const domains = Object.keys(DOMAIN_DATA);
-  const processes = filters.domain ? Object.keys(DOMAIN_DATA[filters.domain]) : [];
-  const stages = filters.domain && filters.process ? DOMAIN_DATA[filters.domain][filters.process] : [];
+  const sectors = ['Service', 'Manufacturing'];
+  const [domains, setDomains] = useState<string[]>([]);
+  const [processes, setProcesses] = useState<string[]>([]); // Now used for Key Functional Areas
+  const [stages, setStages] = useState<string[]>([]);
 
-  const getDomainCount = (domain: string) => {
-    return Object.keys(DOMAIN_DATA[domain]).reduce((total, process) => {
-      return total + DOMAIN_DATA[domain][process].length;
-    }, 0);
-  };
+  // Fetch Key Functional Areas when domain changes
+  useEffect(() => {
+    const fetchProcesses = async () => {
+      if (!filters.sector || !filters.domain) {
+        setProcesses([]);
+        return;
+      }
+      
+      try {
+        const tableName = filters.sector === 'Service' ? 'Service_Match_Cases' : 'Manufacturing_Match_Case';
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('Business-process,Key_Functional_Areas');
+          
+        if (error) {
+          console.error('Supabase error:', error);
+          setProcesses([]);
+          return;
+        }
+        
+        if (!data || !data.length) {
+          console.log('No data returned for', filters.domain);
+          setProcesses([]);
+          return;
+        }
+        
+        console.log('Data returned:', data);
+        
+        // Case-insensitive match for Business-process
+        const filtered = data.filter((row: any) => 
+          row['Business-process'] && 
+          typeof row['Business-process'] === 'string' && 
+          row['Business-process'].toLowerCase() === filters.domain.toLowerCase()
+        );
+        
+        console.log('Filtered data:', filtered);
+        
+        const uniqueAreas = Array.from(new Set(filtered.map((row: any) => row['Key_Functional_Areas']).filter(Boolean)));
+        console.log('Unique areas:', uniqueAreas);
+        
+        setProcesses(uniqueAreas);
+      } catch (err) {
+        console.error('Failed to fetch processes:', err);
+        setProcesses([]);
+      }
+    };
+    
+    fetchProcesses();
+  }, [filters.sector, filters.domain]);
 
-  const getProcessCount = (domain: string, process: string) => {
-    return DOMAIN_DATA[domain][process].length;
-  };
+  // Fetch domains when sector changes
+  useEffect(() => {
+    const fetchDomains = async () => {
+      if (!filters.sector) {
+        setDomains([]);
+        return;
+      }
+      const tableName = filters.sector === 'Service' ? 'Service_Match_Cases' : 'Manufacturing_Match_Case';
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('Business-process');
+      if (error || !data) {
+        setDomains([]);
+        return;
+      }
+      // Extract unique business processes
+      const uniqueDomains = Array.from(new Set(data.map((row: any) => row['Business-process']).filter(Boolean)));
+      setDomains(uniqueDomains);
+    };
+    fetchDomains();
+  }, [filters.sector]);
+
+  // Fetch Job_role for Step 4 when Key_Functional_Areas (process) changes
+  useEffect(() => {
+    const fetchStages = async () => {
+      if (!filters.sector || !filters.domain || !filters.process) {
+        setStages([]);
+        return;
+      }
+      
+      try {
+        const tableName = filters.sector === 'Service' ? 'Service_Match_Cases' : 'Manufacturing_Match_Case';
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('Business-process,Key_Functional_Areas,Job_role')
+          .eq('Business-process', filters.domain)
+          .eq('Key_Functional_Areas', filters.process);
+          
+        if (error) {
+          console.error('Supabase error:', error);
+          setStages([]);
+          return;
+        }
+        
+        if (!data || !data.length) {
+          console.log('No job roles found for', filters.process);
+          setStages([]);
+          return;
+        }
+        
+        console.log('Job role data:', data);
+        
+        // Split job roles by newline and extract unique values
+        let allRoles: string[] = [];
+        data.forEach((row: any) => {
+          if (row.Job_role) {
+            const roles = row.Job_role.split('\n')
+              .map((role: string) => role.trim())
+              .filter((role: string) => role);
+            allRoles = [...allRoles, ...roles];
+          }
+        });
+        
+        // Remove any numbering or bullets at the start (e.g., "1. ", "2. ", etc.)
+        const cleanedRoles = allRoles.map((role: string) => 
+          role.replace(/^\d+\.\s*|\-\s*/, '').trim()
+        );
+        
+        const uniqueRoles = Array.from(new Set(cleanedRoles)).filter(Boolean);
+        console.log('Unique job roles:', uniqueRoles);
+        
+        setStages(uniqueRoles);
+      } catch (err) {
+        console.error('Failed to fetch job roles:', err);
+        setStages([]);
+      }
+    };
+    
+    fetchStages();
+  }, [filters.sector, filters.domain, filters.process]);
 
   const handleFilterChange = (type: keyof FilterData, value: string) => {
-    if (type === 'domain') {
-      setFilters({ domain: value, process: '', stage: '' });
+    if (type === 'sector') {
+      setFilters({ sector: value, domain: '', process: '', stage: '' });
+    } else if (type === 'domain') {
+      setFilters({ ...filters, domain: value, process: '', stage: '' });
     } else if (type === 'process') {
       setFilters({ ...filters, process: value, stage: '' });
     } else {
@@ -40,37 +167,360 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
   };
 
   const resetFilters = () => {
-    setFilters({ domain: '', process: '', stage: '' });
+    setFilters({ sector: '', domain: '', process: '', stage: '' });
+  };
+
+  // Function to save all data to Supabase
+  const saveDataToSupabase = async (data: any): Promise<string> => {
+    try {
+      const fullData = {
+        filters: { ...filters },
+        timestamp: new Date().toISOString(),
+        ...data
+      };
+      
+      // Save to Supabase
+      const recordId = await saveStrategyData(fullData);
+      return recordId;
+    } catch (error) {
+      console.error('Failed to save data to Supabase:', error);
+      return '';
+    }
   };
 
   const handleGenerateStrategy = async () => {
-    if (!filters.domain || !filters.process || !filters.stage) return;
+    if (!filters.sector || !filters.domain || !filters.process || !filters.stage) return;
 
     setIsGenerating(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Fetch the complete data from Supabase based on all filters
+      const tableName = filters.sector === 'Service' ? 'Service_Match_Cases' : 'Manufacturing_Match_Case';
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*') // Fetch all columns
+        .eq('Business-process', filters.domain)
+        .eq('Key_Functional_Areas', filters.process);
+        
+      if (error) {
+        console.error('Supabase error:', error);
+        setIsGenerating(false);
+        return;
+      }
+      
+      // Filter data by the selected job role
+      const matchedData = data.filter((row: any) => {
+        if (row.Job_role) {
+          const roles = row.Job_role.split('\n')
+            .map((role: string) => role.trim())
+            .filter((role: string) => role)
+            .map((role: string) => role.replace(/^\d+\.\s*|\-\s*/, '').trim());
+          return roles.some((role: string) => role === filters.stage);
+        }
+        return false;
+      });
+      
+      console.log('Matched use cases for selected filters:', matchedData);
+      
+      // Function to clean AI use case text
+      const cleanAIUseCaseText = (text: string): string[] => {
+        if (!text) return [];
+        
+        // AI use cases might be separated by newlines or bullets
+        // First split by newlines to get individual entries
+        const lines = text.replace(/\r/g, '').split('\n');
+        
+        // Process each line to remove leading dashes and clean up
+        return lines
+          .map((line: string) => {
+            // Remove the dash prefix, any numbers, and trim whitespace
+            return line.replace(/^\s*(?:-|\d+\.)\s*/, '').trim();
+          })
+          .filter((line: string) => line.length > 5); // Only keep meaningful content
+      };
+      
+      // Collect all AI use case descriptions from matched data
+      const aiUseCaseDescriptions: string[] = [];
+      matchedData.forEach((useCase: any) => {
+        if (useCase['AI Use Cases']) {
+          const cleanedUseCases = cleanAIUseCaseText(useCase['AI Use Cases']);
+          aiUseCaseDescriptions.push(...cleanedUseCases);
+        }
+      });
+      
+      console.log('Cleaned AI Use Case descriptions:', aiUseCaseDescriptions);
+      
+      console.log('AI Use Case descriptions to search for:', aiUseCaseDescriptions);
+      
+      // Fetch matching AI use cases from the appropriate table
+      const aiTableName = filters.sector === 'Service' ? 'Service_Ai_Cases' : 'Manufacturing_Ai_Cases';
+      
+      // Create an array of promises for each AI use case search
+      const aiUseCasePromises = aiUseCaseDescriptions.map(async (description: string) => {
+        if (description.length < 10) {
+          console.log(`Skipping short description: "${description}"`);
+          return []; // Skip very short descriptions
+        }
+        
+        console.log(`Searching for AI use case matching: "${description}"`);
+        
+        // Extract key terms (first 2-3 words) for more focused search
+        const keyTerms = description.split(' ').slice(0, 3).join(' ');
+        
+        // Log the table we're searching in
+        console.log(`Searching in table: ${aiTableName}`);
+        
+        // Search for any AI use cases that match our use case description
+        // First try exact match on the Use_Case column (note the underscore)
+        console.log(`Executing query: .from('${aiTableName}').select('*').ilike('Use_Case', '${description.trim()}')`);
+        let { data: aiCases, error: aiError } = await supabase
+          .from(aiTableName)
+          .select('*')
+          .ilike('Use_Case', description.trim()); // Try exact match (case-insensitive)
+        
+        console.log(`Exact match results for "${description}" in Use_Case column:`, aiCases?.length || 0);
+        
+        // If no results, try with partial match using ILIKE with wildcards
+        if ((!aiCases || aiCases.length === 0) && keyTerms.length > 0) {
+          console.log(`Trying partial match with key terms: "${keyTerms}"`);
+          const { data: partialMatches, error: partialError } = await supabase
+            .from(aiTableName)
+            .select('*')
+            .or(`Use_Case.ilike.%${keyTerms}%, Notes on Implementation.ilike.%${keyTerms}%`); // Try partial match with key terms in two columns
+          
+          console.log(`Partial match results for "${keyTerms}":`, partialMatches?.length || 0);
+          
+          if (partialError) {
+            console.error(`Error fetching AI cases with partial match for "${description}":`, partialError);
+          } else if (partialMatches && partialMatches.length > 0) {
+            aiCases = partialMatches;
+          }
+        }
+        
+        // If still no results, try an even broader search
+        if ((!aiCases || aiCases.length === 0) && description.includes(' ')) {
+          // Try each word in the description
+          const words = description.split(' ')
+            .filter(word => word.length > 3) // Only use meaningful words
+            .slice(0, 2); // Take just the first couple words
+            
+          if (words.length > 0) {
+            const { data: wordMatches, error: wordError } = await supabase
+              .from(aiTableName)
+              .select('*')
+              .ilike('Use Case', `%${words[0]}%`); // Try match with first significant word
+              
+            if (wordError) {
+              console.error(`Error fetching AI cases with word match for "${words[0]}":`, wordError);
+            } else if (wordMatches && wordMatches.length > 0) {
+              aiCases = wordMatches;
+            }
+          }
+        }
+        
+        if (aiError) {
+          console.error(`Error fetching AI cases for "${description}":`, aiError);
+          return [];
+        }
+        
+        console.log(`Search results for "${description}"`, aiCases);
+        return aiCases || [];
+      });
+      
+      // Wait for all AI use case queries to complete
+      const aiUseCaseResults = await Promise.all(aiUseCasePromises);
+      
+      // Flatten and deduplicate the results
+      const allAiCases = aiUseCaseResults.flat();
+      
+      // Process AI cases to clean formatting and standardize data
+      const processedAiCases = processAIUseCases(allAiCases);
+      
+      // Remove duplicates based on Use Case
+      const uniqueAiCases = Array.from(
+        new Map(processedAiCases.map((item: any) => [item['Use Case'], item])).values()
+      );
+      
+      console.log('Matched AI use cases:', uniqueAiCases);
+      
+      // If no AI use cases found, try a more general search
+      if (uniqueAiCases.length === 0) {
+        console.log("No AI use cases found initially, trying broader search");
+        
+        // Try a broader search in the database
+        try {
+          // First, let's check what columns are available
+          console.log(`Checking schema for table: ${aiTableName}`);
+          
+          // Query for some specific AI use cases
+          console.log(`Executing query: .from('${aiTableName}').select('*').limit(5)`);
+          
+          // Get some general AI use cases from the table
+          const { data: generalCases, error } = await supabase
+            .from(aiTableName)
+            .select('*')
+            .limit(5);
+            
+          if (error) {
+            console.error("Error fetching general AI use cases:", error);
+          } else if (generalCases && generalCases.length > 0) {
+            console.log("Found general AI use cases:", generalCases.length);
+            console.log("Sample use case structure:", generalCases[0]);
+            uniqueAiCases.push(...generalCases);
+          } else {
+            // Only if we still have nothing, add fallback cases
+            console.log("No AI use cases found, adding fallback cases");
+            uniqueAiCases.push({
+              'Use_Case': 'AI-powered data analysis for business insights',
+              'AI System Type': 'ML',
+              'Recommended Tools/Platforms': 'TensorFlow, Python, PowerBI',
+              'Custom Development (Yes/No)': 'Yes',
+              'Notes on Implementation': 'Requires data engineering expertise and integration with existing systems.'
+            });
+            uniqueAiCases.push({
+              'Use_Case': 'Customer service chatbot with natural language processing',
+              'AI System Type': 'NLP',
+              'Recommended Tools/Platforms': 'Dialogflow, AWS Lex, Node.js',
+              'Custom Development (Yes/No)': 'Yes',
+              'Notes on Implementation': 'Can be integrated with existing customer support platforms.'
+            });
+          }
+        } catch (error) {
+          console.error("Error in broader AI use case search:", error);
+        }
+      }
+      
+      // Format the data for MatchedUseCasesPage
       const response: StrategyResponse = {
-        matchedUseCases: MATCHED_USE_CASES.reduce((acc, useCase, index) => {
-          acc[(index + 1).toString()] = useCase;
+        matchedUseCases: matchedData.reduce((acc: any, useCase: any, index: number) => {
+          acc[(index + 1).toString()] = {
+            id: index + 1,
+            businessProcess: useCase['Business-process'] || '',
+            functionalAreas: [useCase['Key_Functional_Areas'] || ''],
+            jobRole: filters.stage,
+            primaryMetric: useCase['Primary Value Metric'] || '',
+            secondaryMetric: useCase['Secondary Value Metric'] || '',
+            aiUseCase: useCase['AI Use Cases'] || '',
+            impact: useCase['Impact'] || '',
+            // Set expectedROI based on Impact if available
+            expectedROI: useCase['Impact'] ? 'High' : 'Medium',
+          };
           return acc;
         }, {} as { [key: string]: any }),
-        aiUseCases: AI_USE_CASES.reduce((acc, aiCase, index) => {
-          acc[(index + 1).toString()] = aiCase;
+        
+        // Use the real AI use cases from the database
+        aiUseCases: uniqueAiCases.reduce((acc: any, aiCase: any, index: number) => {
+          if (!aiCase) {
+            console.warn("Found undefined or null AI case at index", index);
+            return acc;
+          }
+          
+          console.log(`Processing AI case ${index}:`, aiCase);
+          
+          try {
+            // Process the tools string to ensure it's always a valid array
+            let tools: string[] = [];
+            if (aiCase['Recommended Tools/Platforms']) {
+              if (typeof aiCase['Recommended Tools/Platforms'] === 'string') {
+                tools = aiCase['Recommended Tools/Platforms']
+                  .split(/[;,]/) // Split by both semicolons and commas
+                  .map((tool: string) => tool.trim())
+                  .filter((tool: string) => tool.length > 0);
+              } else if (Array.isArray(aiCase['Recommended Tools/Platforms'])) {
+                tools = aiCase['Recommended Tools/Platforms'];
+              }
+            } else if (aiCase.tools && Array.isArray(aiCase.tools)) {
+              tools = aiCase.tools;
+            }
+            
+            // Determine if custom development is required
+            const customDevField = aiCase['Custom Development (Yes/No)'] || aiCase.customDev;
+            const customDev = 
+              customDevField === 'Yes' || 
+              customDevField === 'yes' || 
+              customDevField === 'YES' ||
+              customDevField === true;
+            
+            // Use existing useCase field or the Use_Case field from database (note the underscore)
+            const useCaseText = aiCase.useCase || aiCase['Use_Case'] || aiCase['Use Case'] || '';
+            
+            if (!useCaseText) {
+              console.warn(`AI case at index ${index} has no use case text, skipping`);
+              return acc;
+            }
+            
+            // Debug the AI case structure
+            console.log(`AI case ${index} structure:`, Object.keys(aiCase));
+            
+            acc[(index + 1).toString()] = {
+              id: index + 1,
+              useCase: useCaseText,
+              aiSystemType: aiCase['AI System Type'] || aiCase.aiSystemType || 'Other',
+              tools: tools || [],
+              customDev: customDev || false,
+              implementationNotes: aiCase['Notes on Implementation'] || aiCase.implementationNotes || '',
+              // Add additional fields if available
+              expectedROI: aiCase['Expected ROI'] || aiCase.expectedROI || 'Medium'
+            };
+          } catch (error) {
+            console.error(`Error processing AI case at index ${index}:`, error);
+            // Add a placeholder AI use case to avoid breaking the UI
+            acc[(index + 1).toString()] = {
+              id: index + 1,
+              useCase: "AI Use Case " + (index + 1),
+              aiSystemType: "Other",
+              tools: ["Various tools"],
+              customDev: false,
+              implementationNotes: "Details not available",
+              expectedROI: "Medium"
+            };
+          }
           return acc;
         }, {} as { [key: string]: any }),
+        
+        // Keep the demo data for real use cases for now
         realUseCases: REAL_USE_CASES.reduce((acc, realCase, index) => {
           acc[(index + 1).toString()] = realCase;
           return acc;
         }, {} as { [key: string]: any })
       };
 
+      // Save all data to localStorage and Supabase
+      try {
+        // Create separate objects for each data type
+        const matchedUseCasesData = matchedData;
+        const aiUseCasesData = uniqueAiCases;
+        
+        // Save to localStorage for future use
+        saveToLocalStorage('matchedUseCases', matchedUseCasesData);
+        saveToLocalStorage('aiUseCases', aiUseCasesData);
+        saveToLocalStorage('filters', filters);
+        
+        // Create a comprehensive data object
+        const fullDataObject = {
+          matchedUseCases: matchedUseCasesData,
+          aiUseCases: aiUseCasesData,
+          response: response
+        };
+        
+        // Save the comprehensive data to Supabase
+        const recordId = await saveStrategyData(fullDataObject);
+        
+        console.log(`Successfully saved data to Supabase with ID: ${recordId}`);
+      } catch (saveError) {
+        console.error('Failed to save data:', saveError);
+      }
+      
+      // Continue with the original response handling
       onGenerateStrategy(response);
+    } catch (err) {
+      console.error('Failed to generate strategy:', err);
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
-  const canGenerate = filters.domain && filters.process && filters.stage;
+  const canGenerate = filters.sector && filters.domain && filters.process && filters.stage;
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
@@ -81,22 +531,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
       </div>
 
       <div className="bg-white classic-shadow-lg classic-border p-12 mb-12">
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          {/* Step 1: Domain */}
+        <div className="grid md:grid-cols-4 gap-8 mb-12">
+          {/* Step 1: Sector */}
           <div className="space-y-4">
             <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
-              Step 1: Select a Domain
+              Step 1: Select Sector
             </label>
             <div className="relative">
               <select
-                value={filters.domain}
-                onChange={(e) => handleFilterChange('domain', e.target.value)}
+                value={filters.sector}
+                onChange={(e) => handleFilterChange('sector', e.target.value)}
                 className="w-full classic-input appearance-none pr-12 font-medium"
               >
-                <option value="">Choose domain...</option>
-                {domains.map(domain => (
-                  <option key={domain} value={domain}>
-                    {domain} ({getDomainCount(domain)})
+                <option value="">Choose sector...</option>
+                {sectors.map(sector => (
+                  <option key={sector} value={sector}>
+                    {sector}
                   </option>
                 ))}
               </select>
@@ -104,10 +554,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
             </div>
           </div>
 
-          {/* Step 2: Process */}
+          {/* Step 2: Domain */}
           <div className="space-y-4">
             <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
-              Step 2: Select a Process
+              Step 2: Select a Domain
+            </label>
+            <div className="relative">
+              <select
+                value={filters.domain}
+                onChange={(e) => handleFilterChange('domain', e.target.value)}
+                disabled={!filters.sector}
+                className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
+              >
+                <option value="">Choose domain...</option>
+                {domains.map(domain => (
+                  <option key={domain} value={domain}>
+                    {domain}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Step 3: Key Functional Areas */}
+          <div className="space-y-4">
+            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
+              Step 3: Select Key Functional Area
             </label>
             <div className="relative">
               <select
@@ -116,10 +589,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 disabled={!filters.domain}
                 className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
               >
-                <option value="">Choose process...</option>
-                {processes.map(process => (
-                  <option key={process} value={process}>
-                    {process} ({getProcessCount(filters.domain, process)})
+                <option value="">Choose area...</option>
+                {processes.map((area: string) => (
+                  <option key={area} value={area}>
+                    {area}
                   </option>
                 ))}
               </select>
@@ -127,10 +600,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
             </div>
           </div>
 
-          {/* Step 3: Stage */}
+          {/* Step 4: Stage */}
           <div className="space-y-4">
             <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
-              Step 3: Select a Stage
+              Step 4: Select a Stage
             </label>
             <div className="relative">
               <select
@@ -140,7 +613,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
               >
                 <option value="">Choose stage...</option>
-                {stages.map(stage => (
+                {stages.map((stage: string) => (
                   <option key={stage} value={stage}>
                     {stage}
                   </option>
@@ -168,12 +641,50 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
             <Sparkles className="h-5 w-5" />
             <span>{isGenerating ? 'Generating Strategy...' : 'Generate My Strategy'}</span>
           </button>
+          
+          <button
+            onClick={async () => {
+              // Instead of downloading, we'll save to Supabase
+              try {
+                // Get data from localStorage
+                const savedMatchedData = localStorage.getItem('matchedUseCases');
+                const savedAIData = localStorage.getItem('aiUseCases');
+                const savedFilters = localStorage.getItem('filters');
+                
+                if (savedMatchedData || savedAIData) {
+                  const parsedMatchedData = savedMatchedData ? JSON.parse(savedMatchedData) : [];
+                  const parsedAIData = savedAIData ? JSON.parse(savedAIData) : [];
+                  const parsedFilters = savedFilters ? JSON.parse(savedFilters) : {};
+                  
+                  const fullDataObject = {
+                    filters: parsedFilters,
+                    matchedUseCases: parsedMatchedData,
+                    aiUseCases: parsedAIData,
+                    timestamp: new Date().toISOString()
+                  };
+                  
+                  // Save to Supabase
+                  const recordId = await saveStrategyData(fullDataObject);
+                  alert(`Data successfully saved to database with ID: ${recordId}`);
+                } else {
+                  alert('No saved data found. Generate a strategy first.');
+                }
+              } catch (error) {
+                console.error('Error saving data:', error);
+                alert('Error saving data to database');
+              }
+            }}
+            className="flex items-center justify-center space-x-3 classic-button-secondary"
+          >
+            <Save className="h-5 w-5" />
+            <span>Save Data to Server</span>
+          </button>
         </div>
 
         {canGenerate && !isGenerating && (
           <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900">
             <p className="text-blue-900 text-sm font-semibold tracking-wide">
-              Ready to generate strategy for: <strong>{filters.domain}</strong> → <strong>{filters.process}</strong> → <strong>{filters.stage}</strong>
+              Ready to generate strategy for: <strong>{filters.sector}</strong> → <strong>{filters.domain}</strong> → <strong>{filters.process}</strong> → <strong>{filters.stage}</strong>
             </p>
           </div>
         )}

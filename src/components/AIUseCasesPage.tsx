@@ -15,12 +15,56 @@ const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
 }) => {
   const [selectedType, setSelectedType] = useState<string>('');
 
-  const useCasesList = Object.values(useCases);
+  // Ensure useCases is not null or empty and convert to array if needed
+  console.log("AIUseCasesPage received useCases:", useCases);
+  const useCasesList = useCases && typeof useCases === 'object' ? Object.values(useCases) : [];
+  console.log("Converted to list:", useCasesList);
+  
+  // Make sure all expected fields are present and valid
+  const validUseCases = useCasesList
+    .filter((useCase): useCase is AIUseCase => !!useCase) // Type guard to ensure useCase is not null
+    .map(useCase => {
+      // Log each use case for debugging
+      console.log("Processing use case:", useCase);
+      
+      // Check if this is a use case directly from Supabase
+      const isSupabaseFormat = useCase.Use_Case !== undefined;
+      
+      // Extract tools array
+      let toolsArray: string[] = [];
+      if (Array.isArray(useCase.tools)) {
+        toolsArray = useCase.tools;
+      } else if (typeof useCase['Recommended Tools/Platforms'] === 'string') {
+        toolsArray = useCase['Recommended Tools/Platforms']
+          .split(/[;,]/)
+          .map(tool => tool.trim())
+          .filter(tool => tool.length > 0);
+      }
+      
+      // Determine if custom development is required
+      const isCustomDev = typeof useCase.customDev === 'boolean' ? 
+        useCase.customDev : 
+        useCase['Custom Development (Yes/No)'] === 'Yes';
+      
+      return {
+        id: useCase.id || Math.random().toString(),
+        useCase: useCase.useCase || useCase.Use_Case || "Unnamed Use Case",
+        aiSystemType: useCase.aiSystemType || useCase['AI System Type'] || "Unspecified",
+        tools: toolsArray,
+        customDev: isCustomDev,
+        implementationNotes: useCase.implementationNotes || 
+          useCase['Notes on Implementation'] || ""
+      };
+    });
+  
   const filteredUseCases = selectedType 
-    ? useCasesList.filter(useCase => useCase.aiSystemType === selectedType)
-    : useCasesList;
+    ? validUseCases.filter(useCase => useCase.aiSystemType === selectedType)
+    : validUseCases;
 
-  const aiTypes = ['Computer Vision', 'Generative AI', 'NLP', 'ML', 'Predictive Analysis', 'RPA'];
+  // Dynamically generate AI types from the available use cases
+  const aiTypes = Array.from(
+    new Set(validUseCases.map(useCase => useCase.aiSystemType).filter(Boolean))
+  ).sort();
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -121,7 +165,11 @@ const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
 
       {filteredUseCases.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500">No AI use cases match the selected criteria.</p>
+          <p className="text-gray-500">
+            {validUseCases.length === 0 
+              ? "No AI use cases were found. Please try regenerating the strategy." 
+              : "No AI use cases match the selected criteria."}
+          </p>
         </div>
       )}
 

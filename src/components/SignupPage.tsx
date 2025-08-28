@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../context/AuthContext';
+
+const supabase = createClient(
+  'https://kabdokfowpwrdgywjtfv.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYmRva2Zvd3B3cmRneXdqdGZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzM3NTUsImV4cCI6MjA3MTgwOTc1NX0.8Nt4Lc1TvnotyTXKUHAhq3W14Imx-QfbMpIw1f15pG4'
+);
 
 interface SignupPageProps {
   onShowLogin: () => void;
@@ -8,7 +14,8 @@ interface SignupPageProps {
 
 const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -34,9 +41,27 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
     setIsLoading(true);
 
     try {
-      await signup(formData.email, formData.password, formData.name);
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+      // Generate UUIDs for id and user_id
+      const uuid = () => crypto.randomUUID();
+      const newProfile = {
+        id: uuid(),
+        user_id: uuid(),
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        // You should hash the password in production!
+        password: formData.password,
+        is_admin: false,
+      };
+      const { data, error: insertError } = await supabase
+        .from('profiles')
+        .insert([newProfile])
+        .select();
+
+      if (insertError) throw insertError;
+      onShowLogin(); // Go back to login page after signup
+    } catch (err: any) {
+      setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -75,22 +100,42 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
               </div>
             )}
 
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <div className="mt-1 relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter your full name"
-                />
+            <div className="flex space-x-4">
+              <div className="w-1/2">
+                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <div className="mt-1 relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <input
+                    id="first_name"
+                    name="first_name"
+                    type="text"
+                    required
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="First name"
+                  />
+                </div>
+              </div>
+              <div className="w-1/2">
+                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <div className="mt-1 relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <input
+                    id="last_name"
+                    name="last_name"
+                    type="text"
+                    required
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Last name"
+                  />
+                </div>
               </div>
             </div>
 

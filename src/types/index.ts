@@ -5,6 +5,7 @@ export interface User {
 }
 
 export interface FilterData {
+  sector: string;
   domain: string;
   process: string;
   stage: string;
@@ -29,6 +30,15 @@ export interface AIUseCase {
   tools: string[];
   customDev: boolean;
   implementationNotes: string;
+  expectedROI?: string;
+  
+  // Supabase column names
+  Use_Case?: string;
+  'AI System Type'?: string;
+  'Recommended Tools/Platforms'?: string;
+  'Custom Development (Yes/No)'?: string;
+  'Notes on Implementation'?: string;
+  'Expected ROI'?: string;
 }
 
 export interface RealUseCase {

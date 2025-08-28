@@ -26,7 +26,16 @@ function AppContent() {
   }
 
   const handleGenerateStrategy = (response: StrategyResponse) => {
-    setStrategyData(response);
+    console.log("Received strategy response:", response);
+    
+    // Ensure the response has all the required properties
+    const validResponse = {
+      matchedUseCases: response.matchedUseCases || {},
+      aiUseCases: response.aiUseCases || {},
+      realUseCases: response.realUseCases || {}
+    };
+    
+    setStrategyData(validResponse);
     setCurrentView('matched');
   };
 
@@ -44,15 +53,19 @@ function AppContent() {
         return strategyData ? (
           <MatchedUseCasesPage
             useCases={strategyData.matchedUseCases}
-            onViewAIUseCases={() => setCurrentView('ai')}
+            onViewAIUseCases={() => {
+              console.log("Transitioning to AI Use Cases view");
+              setCurrentView('ai');
+            }}
             onRestart={handleRestart}
           />
         ) : null;
       
       case 'ai':
+        console.log("AI Use Cases data:", strategyData?.aiUseCases);
         return strategyData ? (
           <AIUseCasesPage
-            useCases={strategyData.aiUseCases}
+            useCases={strategyData.aiUseCases || {}}
             onViewRealUseCases={() => setCurrentView('real')}
             onRestart={handleRestart}
           />
