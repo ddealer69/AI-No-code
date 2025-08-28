@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { ArrowRight, RotateCcw, Filter } from 'lucide-react';
 import { UseCase } from '../types';
 
@@ -15,7 +16,38 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<string>('');
 
+  const supabase = createClient(
+    'https://kabdokfowpwrdgywjtfv.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYmRva2Zvd3B3cmRneXdqdGZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzM3NTUsImV4cCI6MjA3MTgwOTc1NX0.8Nt4Lc1TvnotyTXKUHAhq3W14Imx-QfbMpIw1f15pG4'
+  );
+
   const useCasesList = Object.values(useCases);
+
+  // Search BP column for each use case and print output
+  const searchBP = async (useCase: UseCase) => {
+    const bpTemplate = `Business Process - ${useCase.businessProcess}`;
+    const faTemplate = `Functional area - ${useCase.functionalAreas[0]}`;
+    const ucTemplate = `Use Case - ${useCase.aiUseCase}`;
+    const searchString = `${bpTemplate}*${faTemplate}*${ucTemplate}`;
+    const { data, error } = await supabase
+      .from('Service_Real_Cases')
+      .select('*')
+      .ilike('BP', `%${useCase.businessProcess}%`)
+      .ilike('BP', `%${useCase.functionalAreas[0]}%`)
+      .ilike('BP', `%${useCase.aiUseCase}%`);
+    if (error) {
+      console.error('BP search error:', error);
+    } else {
+      console.log('BP search result for:', searchString, data);
+    }
+  };
+
+  // Example: search for first filtered use case on mount
+  React.useEffect(() => {
+    if (useCasesList.length > 0) {
+      searchBP(useCasesList[0]);
+    }
+  }, [useCasesList]);
   const filteredUseCases = selectedMetric 
     ? useCasesList.filter(useCase => 
         useCase.primaryMetric === selectedMetric || useCase.secondaryMetric === selectedMetric

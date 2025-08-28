@@ -1,17 +1,67 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { Download, Mail, RotateCcw, Building2, Target, TrendingUp } from 'lucide-react';
 import { RealUseCase } from '../types';
 
 interface RealUseCasesPageProps {
   useCases: { [key: string]: RealUseCase };
   onRestart: () => void;
+  strategy?: {
+    businessProcess: string;
+    functionalAreas: string[];
+    aiUseCase: string;
+  };
 }
+
+const supabase = createClient(
+  'https://kabdokfowpwrdgywjtfv.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYmRva2Zvd3B3cmRneXdqdGZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzM3NTUsImV4cCI6MjA3MTgwOTc1NX0.8Nt4Lc1TvnotyTXKUHAhq3W14Imx-QfbMpIw1f15pG4'
+);
 
 const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
   useCases,
-  onRestart
+  onRestart,
+  strategy
 }) => {
-  const useCasesList = Object.values(useCases);
+  const [dbUseCases, setDbUseCases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUseCases = async () => {
+      setLoading(true);
+      // You can switch table based on sector if needed
+      const { data, error } = await supabase
+        .from('Service_Real_Cases')
+        .select('*');
+      if (error) {
+        console.error('Error fetching real use cases:', error);
+        setDbUseCases([]);
+      } else {
+        setDbUseCases(data || []);
+      }
+      setLoading(false);
+    };
+    fetchUseCases();
+  }, []);
+
+  // Helper to filter BP column by matching fields
+  const filterUseCases = (bpList: any[], strategy: any) => {
+    if (!strategy) return bpList;
+    return bpList.filter((useCase) => {
+      const bpText = useCase.BP || '';
+      // Normalize dashes for matching
+      const normalize = (str: string) => str.replace(/^-\s*/, '').replace(/--\s*/, '- ').trim();
+      const matchBP = bpText.includes(strategy.businessProcess);
+      const matchFA = bpText.includes(strategy.functionalAreas?.[0] || '');
+      // Try both single and double dash for Use Case
+      const useCaseOut = strategy.aiUseCase ? normalize(strategy.aiUseCase) : '';
+      const matchUC = bpText.includes(useCaseOut) || bpText.includes('- ' + useCaseOut) || bpText.includes('-- ' + useCaseOut);
+      return matchBP && matchFA && matchUC;
+    });
+  };
+
+  // Use dynamic strategy from props if provided
+  const useCasesList = dbUseCases.length > 0 ? filterUseCases(dbUseCases, strategy) : Object.values(useCases);
 
   const handleExport = () => {
     const content = useCasesList.map((useCase) => `
@@ -90,66 +140,66 @@ Real Project 2: ${useCase.project2}
 
       {/* Real Use Cases */}
       <div className="space-y-6">
-        {useCasesList.map((useCase) => (
-          <div
-            key={useCase.id}
-            className="bg-white rounded-xl shadow-lg border overflow-hidden"
-          >
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Building2 className="h-6 w-6 text-blue-600" />
-                  <h2 className="text-xl font-bold text-gray-900">{useCase.company}</h2>
-                </div>
-                <div className="text-sm text-blue-600 font-medium">
-                  Real World Implementation
+        {loading ? (
+          <div className="text-center py-12 text-lg text-gray-500">Loading real use cases...</div>
+        ) : (
+          useCasesList.map((useCase) => (
+            <div
+              key={useCase.id}
+              className="bg-white rounded-xl shadow-lg border overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Building2 className="h-6 w-6 text-blue-600" />
+                    <h2 className="text-xl font-bold text-gray-900">{useCase.company || useCase.Company || 'Unknown Company'}</h2>
+                  </div>
+                  <div className="text-sm text-blue-600 font-medium">
+                    Real World Implementation
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6">
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
+              <div className="p-6">
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-1">Business Process, Function, Use Case, Outcome</h3>
+                        <p className="text-gray-600">{useCase.BP || ''}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3">
+                      <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        {/* Function is now part of BP column, so skip this field */}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      {/* Outcome is now part of BP column, so skip this field */}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">Business Process</h3>
-                      <p className="text-gray-600">{useCase.businessProcess}</p>
-                    </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    {/* Real Project Example 1 is now part of BP column, so skip this field */}
                   </div>
 
-                  <div className="flex items-start space-x-3">
-                    <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">Function</h3>
-                      <p className="text-gray-600">{useCase.function}</p>
-                    </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    {/* Real Project Example 2 is now part of BP column, so skip this field */}
                   </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Achieved Outcome</h3>
-                    <p className="text-green-700 font-medium">{useCase.outcome}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Real Project Example 1</h3>
-                  <p className="text-gray-700 leading-relaxed">{useCase.project1}</p>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Real Project Example 2</h3>
-                  <p className="text-gray-700 leading-relaxed">{useCase.project2}</p>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Summary Section */}

@@ -10,6 +10,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
+  const [lastStrategy, setLastStrategy] = useState<any>(null);
   const [filters, setFilters] = useState<FilterData>({
     sector: '',
     domain: '',
@@ -189,6 +190,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
   };
 
   const handleGenerateStrategy = async () => {
+      // Check if demo text exists in the single column
+      const demoText = `Business Process - Client Acquisition & Engagement. \nFunctional area - 2.1 Lead Generation & Qualification.\nUse Case - - AI tools to scrape and score potential leads based on web presence, firmographics, and intent signals.\nOutcome - Higher quality leads.\nExpected ROI - 40-50% improvement in lead quality.`;
+      const { data: demoExists, error: demoError } = await supabase
+        .from('Service_Real_Cases')
+        .select('*')
+        .ilike('BP, Function, Use case, Outcome', `%${demoText}%`);
+      if (demoError) {
+        console.error('Supabase error (demo check):', demoError);
+      } else {
+        console.log('Demo text exists:', demoExists && demoExists.length > 0);
+      }
     if (!filters.sector || !filters.domain || !filters.process || !filters.stage) return;
 
     setIsGenerating(true);
@@ -511,8 +523,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
         console.error('Failed to save data:', saveError);
       }
       
-      // Continue with the original response handling
-      onGenerateStrategy(response);
+  // Print and save the generated strategy output
+  console.log('Generated AI Strategy Output:', response);
+  setLastStrategy(response);
+  onGenerateStrategy(response);
     } catch (err) {
       console.error('Failed to generate strategy:', err);
     } finally {
