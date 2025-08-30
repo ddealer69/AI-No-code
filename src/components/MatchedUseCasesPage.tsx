@@ -5,7 +5,7 @@ import { UseCase } from '../types';
 
 interface MatchedUseCasesPageProps {
   useCases: { [key: string]: UseCase };
-  onViewAIUseCases: () => void;
+  onViewAIUseCases: (realUseCasesData?: any[]) => void;
   onRestart: () => void;
 }
 
@@ -15,6 +15,7 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
   onRestart
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<string>('');
+  const [realUseCasesData, setRealUseCasesData] = useState<any[]>([]);
 
   const supabase = createClient(
     'https://kabdokfowpwrdgywjtfv.supabase.co',
@@ -25,20 +26,62 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
 
   // Search BP column for each use case and print output
   const searchBP = async (useCase: UseCase) => {
+    // Templates for Service_Real_Cases
     const bpTemplate = `Business Process - ${useCase.businessProcess}`;
     const faTemplate = `Functional area - ${useCase.functionalAreas[0]}`;
     const ucTemplate = `Use Case - ${useCase.aiUseCase}`;
-    const searchString = `${bpTemplate}*${faTemplate}*${ucTemplate}`;
-    const { data, error } = await supabase
-      .from('Service_Real_Cases')
-      .select('*')
-      .ilike('BP', `%${useCase.businessProcess}%`)
-      .ilike('BP', `%${useCase.functionalAreas[0]}%`)
-      .ilike('BP', `%${useCase.aiUseCase}%`);
-    if (error) {
-      console.error('BP search error:', error);
-    } else {
-      console.log('BP search result for:', searchString, data);
+    const serviceSearchString = `${bpTemplate}*${faTemplate}*${ucTemplate}`;
+    
+    // Templates for Manufacturing_Real_Cases (without "- " in Use Case)
+    const manufacturingBpTemplate = `Business Process - ${useCase.businessProcess}`;
+    const manufacturingFaTemplate = `Functional area - ${useCase.functionalAreas[0]}`;
+    const manufacturingUcTemplate = `Use Case ${useCase.aiUseCase}`;
+    const manufacturingSearchString = `${manufacturingBpTemplate}*${manufacturingFaTemplate}*${manufacturingUcTemplate}`;
+    
+    try {
+      // Search in Service_Real_Cases first
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('Service_Real_Cases')
+        .select('*')
+        .ilike('BP', `%${useCase.businessProcess}%`)
+        .ilike('BP', `%${useCase.functionalAreas[0]}%`)
+        .ilike('BP', `%${useCase.aiUseCase}%`);
+
+      if (serviceError) {
+        console.error('Service BP search error:', serviceError);
+      } else {
+        console.log('Service BP search result for:', serviceSearchString, serviceData);
+        if (serviceData && serviceData.length > 0) {
+          setRealUseCasesData(serviceData);
+          return;
+        }
+      }
+
+      // If no data found in Service_Real_Cases, search in Manufacturing_Real_Cases
+      const { data: manufacturingData, error: manufacturingError } = await supabase
+        .from('Manufacturing_Real_Cases')
+        .select('*')
+        .ilike('BP', `%${useCase.businessProcess}%`)
+        .ilike('BP', `%${useCase.functionalAreas[0]}%`)
+        .ilike('BP', `%${useCase.aiUseCase}%`);
+
+      if (manufacturingError) {
+        console.error('Manufacturing BP search error:', manufacturingError);
+      } else {
+        console.log('Manufacturing BP search result for:', manufacturingSearchString, manufacturingData);
+        if (manufacturingData && manufacturingData.length > 0) {
+          setRealUseCasesData(manufacturingData);
+          return;
+        }
+      }
+
+      // If no data found in either table, set empty array
+      console.log('No data found in either table for Service:', serviceSearchString, 'Manufacturing:', manufacturingSearchString);
+      setRealUseCasesData([]);
+      
+    } catch (error) {
+      console.error('Error searching BP:', error);
+      setRealUseCasesData([]);
     }
   };
 
@@ -98,7 +141,7 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
           <div
             key={useCase.id}
             className="bg-white classic-shadow-lg classic-border hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:-translate-y-1"
-            onClick={onViewAIUseCases}
+            onClick={() => onViewAIUseCases(realUseCasesData)}
           >
             <div className="p-8">
               <div className="flex justify-between items-start mb-6">
@@ -172,7 +215,7 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
       {/* Action Button */}
       <div className="text-center">
         <button
-          onClick={onViewAIUseCases}
+          onClick={() => onViewAIUseCases(realUseCasesData)}
           className="classic-button-primary"
         >
           View AI Implementation Details

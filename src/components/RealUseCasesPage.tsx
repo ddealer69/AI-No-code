@@ -11,6 +11,7 @@ interface RealUseCasesPageProps {
     functionalAreas: string[];
     aiUseCase: string;
   };
+  realUseCasesData?: any[];
 }
 
 const supabase = createClient(
@@ -21,28 +22,35 @@ const supabase = createClient(
 const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
   useCases,
   onRestart,
-  strategy
+  strategy,
+  realUseCasesData
 }) => {
   const [dbUseCases, setDbUseCases] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchUseCases = async () => {
-      setLoading(true);
-      // You can switch table based on sector if needed
-      const { data, error } = await supabase
-        .from('Service_Real_Cases')
-        .select('*');
-      if (error) {
-        console.error('Error fetching real use cases:', error);
-        setDbUseCases([]);
-      } else {
-        setDbUseCases(data || []);
-      }
+    if (realUseCasesData && realUseCasesData.length > 0) {
+      // Use the passed data from MatchedUseCasesPage
+      setDbUseCases(realUseCasesData);
       setLoading(false);
-    };
-    fetchUseCases();
-  }, []);
+    } else {
+      // Fallback to fetching from Supabase if no data is passed
+      const fetchUseCases = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('Service_Real_Cases')
+          .select('*');
+        if (error) {
+          console.error('Error fetching real use cases:', error);
+          setDbUseCases([]);
+        } else {
+          setDbUseCases(data || []);
+        }
+        setLoading(false);
+      };
+      fetchUseCases();
+    }
+  }, [realUseCasesData]);
 
   // Helper to filter BP column by matching fields
   const filterUseCases = (bpList: any[], strategy: any) => {
@@ -65,13 +73,8 @@ const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
 
   const handleExport = () => {
     const content = useCasesList.map((useCase) => `
-Company: ${useCase.company}
-Business Process: ${useCase.businessProcess}
-Function: ${useCase.function}
-Outcome: ${useCase.outcome}
-
-Real Project 1: ${useCase.project1}
-Real Project 2: ${useCase.project2}
+Company: ${useCase.Company || useCase.company || 'Unknown'}
+Details: ${useCase.BP || 'No details available'}
 
 ---
 `).join('\n');
@@ -90,13 +93,8 @@ Real Project 2: ${useCase.project2}
   const handleEmailExport = () => {
     const subject = 'AI Strategy Explorer - Real Use Cases Report';
     const body = useCasesList.map((useCase) => `
-Company: ${useCase.company}
-Business Process: ${useCase.businessProcess}
-Function: ${useCase.function}
-Outcome: ${useCase.outcome}
-
-Real Project 1: ${useCase.project1}
-Real Project 2: ${useCase.project2}
+Company: ${useCase.Company || useCase.company || 'Unknown'}
+Details: ${useCase.BP || 'No details available'}
 `).join('\n\n---\n\n');
 
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -161,40 +159,55 @@ Real Project 2: ${useCase.project2}
               </div>
 
               <div className="p-6">
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-1">Business Process, Function, Use Case, Outcome</h3>
-                        <p className="text-gray-600">{useCase.BP || ''}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3">
-                      <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        {/* Function is now part of BP column, so skip this field */}
-                      </div>
-                    </div>
-                  </div>
-
+                <div className="space-y-6">
                   <div className="flex items-start space-x-3">
-                    <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <div>
-                      {/* Outcome is now part of BP column, so skip this field */}
+                    <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-2">Complete Business Case Details</h3>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-sans text-justify">
+                          {useCase.BP || 'No details available'}
+                        </pre>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    {/* Real Project Example 1 is now part of BP column, so skip this field */}
-                  </div>
+                  {/* Additional fields if they exist */}
+                  {useCase.Company && (
+                    <div className="flex items-start space-x-3">
+                      <Building2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-1">Company</h4>
+                        <p className="text-gray-600">{useCase.Company}</p>
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    {/* Real Project Example 2 is now part of BP column, so skip this field */}
-                  </div>
+                  {useCase.Sector && (
+                    <div className="flex items-start space-x-3">
+                      <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-1">Sector</h4>
+                        <p className="text-gray-600">{useCase.Sector}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Display any other fields that might be in the data */}
+                  {Object.entries(useCase).map(([key, value]) => {
+                    if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && value) {
+                      return (
+                        <div key={key} className="flex items-start space-x-3">
+                          <div className="h-5 w-5 bg-gray-300 rounded-full mt-0.5 flex-shrink-0"></div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-1 capitalize">{key.replace(/_/g, ' ')}</h4>
+                            <p className="text-gray-600">{String(value)}</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
                 </div>
               </div>
             </div>

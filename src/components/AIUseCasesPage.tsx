@@ -4,14 +4,16 @@ import { AIUseCase } from '../types';
 
 interface AIUseCasesPageProps {
   useCases: { [key: string]: AIUseCase };
-  onViewRealUseCases: () => void;
+  onViewRealUseCases: (realUseCasesData?: any[]) => void;
   onRestart: () => void;
+  realUseCasesData?: any[];
 }
 
 const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
   useCases,
   onViewRealUseCases,
-  onRestart
+  onRestart,
+  realUseCasesData
 }) => {
   const [selectedType, setSelectedType] = useState<string>('');
 
@@ -28,7 +30,7 @@ const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
       console.log("Processing use case:", useCase);
       
       // Check if this is a use case directly from Supabase
-      const isSupabaseFormat = useCase.Use_Case !== undefined;
+      // const isSupabaseFormat = useCase.Use_Case !== undefined;
       
       // Extract tools array
       let toolsArray: string[] = [];
@@ -107,7 +109,7 @@ const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
           <div
             key={useCase.id}
             className="bg-white rounded-xl shadow-lg border hover:shadow-xl transition-all duration-300 cursor-pointer"
-            onClick={onViewRealUseCases}
+            onClick={() => onViewRealUseCases(realUseCasesData)}
           >
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
@@ -176,7 +178,7 @@ const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
       {/* Action Button */}
       <div className="text-center">
         <button
-          onClick={onViewRealUseCases}
+          onClick={() => onViewRealUseCases(realUseCasesData)}
           className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
         >
           View Real World Examples

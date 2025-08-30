@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
@@ -16,6 +16,7 @@ function AppContent() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [strategyData, setStrategyData] = useState<StrategyResponse | null>(null);
+  const [realUseCasesData, setRealUseCasesData] = useState<any[]>([]);
 
   if (!user) {
     return currentView === 'signup' ? (
@@ -53,8 +54,11 @@ function AppContent() {
         return strategyData ? (
           <MatchedUseCasesPage
             useCases={strategyData.matchedUseCases}
-            onViewAIUseCases={() => {
+            onViewAIUseCases={(passedRealUseCasesData) => {
               console.log("Transitioning to AI Use Cases view");
+              if (passedRealUseCasesData) {
+                setRealUseCasesData(passedRealUseCasesData);
+              }
               setCurrentView('ai');
             }}
             onRestart={handleRestart}
@@ -66,8 +70,14 @@ function AppContent() {
         return strategyData ? (
           <AIUseCasesPage
             useCases={strategyData.aiUseCases || {}}
-            onViewRealUseCases={() => setCurrentView('real')}
+            onViewRealUseCases={(passedRealUseCasesData) => {
+              if (passedRealUseCasesData) {
+                setRealUseCasesData(passedRealUseCasesData);
+              }
+              setCurrentView('real');
+            }}
             onRestart={handleRestart}
+            realUseCasesData={realUseCasesData}
           />
         ) : null;
       
@@ -76,6 +86,7 @@ function AppContent() {
           <RealUseCasesPage
             useCases={strategyData.realUseCases}
             onRestart={handleRestart}
+            realUseCasesData={realUseCasesData}
           />
         ) : null;
       
