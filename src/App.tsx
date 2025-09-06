@@ -8,15 +8,21 @@ import Dashboard from './components/Dashboard';
 import MatchedUseCasesPage from './components/MatchedUseCasesPage';
 import AIUseCasesPage from './components/AIUseCasesPage';
 import RealUseCasesPage from './components/RealUseCasesPage';
+import CurrentStateAnalysisWizard from './components/CurrentStateAnalysisWizard';
+import FutureStateAnalysisWizard from './components/FutureStateAnalysisWizard';
 import { StrategyResponse } from './types';
+import { CurrentStateAnalysis, ScoreBreakdown } from './types/currentStateAnalysis';
+import { FutureStateAnalysis, FutureScoreBreakdown } from './types/futureStateAnalysis';
 
-type ViewState = 'login' | 'signup' | 'dashboard' | 'matched' | 'ai' | 'real';
+type ViewState = 'login' | 'signup' | 'dashboard' | 'matched' | 'ai' | 'real' | 'analysis' | 'future-analysis';
 
 function AppContent() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [strategyData, setStrategyData] = useState<StrategyResponse | null>(null);
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>([]);
+  const [analysisData, setAnalysisData] = useState<{ analysis: CurrentStateAnalysis; scores: ScoreBreakdown } | null>(null);
+  const [futureAnalysisData, setFutureAnalysisData] = useState<{ analysis: FutureStateAnalysis; scores: FutureScoreBreakdown } | null>(null);
 
   if (!user) {
     return currentView === 'signup' ? (
@@ -48,7 +54,37 @@ function AppContent() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard onGenerateStrategy={handleGenerateStrategy} />;
+        return <Dashboard 
+          onGenerateStrategy={handleGenerateStrategy} 
+          onStartAnalysis={() => setCurrentView('analysis')}
+        />;
+      
+      case 'analysis':
+        return (
+          <CurrentStateAnalysisWizard
+            onComplete={(analysis, scores) => {
+              setAnalysisData({ analysis, scores });
+              // You can redirect to results or back to dashboard
+              setCurrentView('dashboard');
+              // Show success message or redirect to results view
+              alert(`Analysis complete! Total score: ${scores.total}/300 - ${scores.outcome}`);
+            }}
+            onStartFutureAnalysis={() => setCurrentView('future-analysis')}
+          />
+        );
+      
+      case 'future-analysis':
+        return (
+          <FutureStateAnalysisWizard
+            onComplete={(analysis, scores) => {
+              setFutureAnalysisData({ analysis, scores });
+              // You can redirect to results or back to dashboard
+              setCurrentView('dashboard');
+              // Show success message or redirect to results view
+              alert(`Future State Planning complete! Total score: ${scores.total}/302 - ${scores.outcome}`);
+            }}
+          />
+        );
       
       case 'matched':
         return strategyData ? (
@@ -94,7 +130,10 @@ function AppContent() {
         ) : null;
       
       default:
-        return <Dashboard onGenerateStrategy={handleGenerateStrategy} />;
+        return <Dashboard 
+          onGenerateStrategy={handleGenerateStrategy} 
+          onStartAnalysis={() => setCurrentView('analysis')}
+        />;
     }
   };
 

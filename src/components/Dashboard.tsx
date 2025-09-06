@@ -7,9 +7,10 @@ import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabase
 
 interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
+  onStartAnalysis?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalysis }) => {
   const [filters, setFilters] = useState<FilterData>({
     sector: '',
     domain: '',
@@ -635,6 +636,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
             <Sparkles className="h-4 w-4" />
             <span>{isGenerating ? 'Generating Strategy...' : 'Generate My Strategy'}</span>
           </button>
+          
+          {onStartAnalysis && (
+            <button
+              onClick={onStartAnalysis}
+              className="flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              <span>Current State Analysis</span>
+            </button>
+          )}
           
           <button
             onClick={async () => {
