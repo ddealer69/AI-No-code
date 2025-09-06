@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { ArrowRight, RotateCcw, Filter, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowRight, RotateCcw, Filter, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { AIUseCase } from '../types';
 
 interface AIUseCasesPageProps {
   useCases: { [key: string]: AIUseCase };
   onViewRealUseCases: (realUseCasesData?: any[]) => void;
+  onViewPrevious: () => void;
   onRestart: () => void;
   realUseCasesData?: any[];
 }
@@ -12,6 +13,7 @@ interface AIUseCasesPageProps {
 const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
   useCases,
   onViewRealUseCases,
+  onViewPrevious,
   onRestart,
   realUseCasesData
 }) => {
@@ -92,6 +94,14 @@ const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
               ))}
             </select>
           </div>
+
+          <button
+            onClick={onViewPrevious}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>See Previous</span>
+          </button>
 
           <button
             onClick={onRestart}
@@ -175,8 +185,16 @@ const AIUseCasesPage: React.FC<AIUseCasesPageProps> = ({
         </div>
       )}
 
-      {/* Action Button */}
-      <div className="text-center">
+      {/* Action Buttons */}
+      <div className="flex justify-center space-x-4">
+        <button
+          onClick={onViewPrevious}
+          className="flex items-center space-x-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>See Previous</span>
+        </button>
+        
         <button
           onClick={() => onViewRealUseCases(realUseCasesData)}
           className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"

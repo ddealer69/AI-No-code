@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { ArrowRight, RotateCcw, Filter } from 'lucide-react';
+import { ArrowRight, RotateCcw, Filter, ArrowLeft } from 'lucide-react';
 import { UseCase } from '../types';
 
 interface MatchedUseCasesPageProps {
   useCases: { [key: string]: UseCase };
   onViewAIUseCases: (realUseCasesData?: any[]) => void;
+  onViewPrevious: () => void;
   onRestart: () => void;
 }
 
 const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
   useCases,
   onViewAIUseCases,
+  onViewPrevious,
   onRestart
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<string>('');
@@ -126,6 +128,14 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
           </div>
 
           <button
+            onClick={onViewPrevious}
+            className="flex items-center space-x-3 classic-button-secondary text-xs"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>See Previous</span>
+          </button>
+
+          <button
             onClick={onRestart}
             className="flex items-center space-x-3 classic-button-secondary text-xs"
           >
@@ -212,8 +222,16 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
         </div>
       )}
 
-      {/* Action Button */}
-      <div className="text-center">
+      {/* Action Buttons */}
+      <div className="flex justify-center space-x-4">
+        <button
+          onClick={onViewPrevious}
+          className="flex items-center space-x-2 classic-button-secondary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>See Previous</span>
+        </button>
+        
         <button
           onClick={() => onViewAIUseCases(realUseCasesData)}
           className="classic-button-primary"

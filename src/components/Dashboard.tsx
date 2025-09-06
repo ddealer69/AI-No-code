@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, Save, Database } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, Save } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
@@ -10,7 +10,6 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
-  const [lastStrategy, setLastStrategy] = useState<any>(null);
   const [filters, setFilters] = useState<FilterData>({
     sector: '',
     domain: '',
@@ -169,24 +168,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
 
   const resetFilters = () => {
     setFilters({ sector: '', domain: '', process: '', stage: '' });
-  };
-
-  // Function to save all data to Supabase
-  const saveDataToSupabase = async (data: any): Promise<string> => {
-    try {
-      const fullData = {
-        filters: { ...filters },
-        timestamp: new Date().toISOString(),
-        ...data
-      };
-      
-      // Save to Supabase
-      const recordId = await saveStrategyData(fullData);
-      return recordId;
-    } catch (error) {
-      console.error('Failed to save data to Supabase:', error);
-      return '';
-    }
   };
 
   const handleGenerateStrategy = async () => {
@@ -523,10 +504,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
         console.error('Failed to save data:', saveError);
       }
       
-  // Print and save the generated strategy output
-  console.log('Generated AI Strategy Output:', response);
-  setLastStrategy(response);
-  onGenerateStrategy(response);
+      // Print and save the generated strategy output
+      console.log('Generated AI Strategy Output:', response);
+      onGenerateStrategy(response);
     } catch (err) {
       console.error('Failed to generate strategy:', err);
     } finally {
@@ -537,25 +517,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
   const canGenerate = filters.sector && filters.domain && filters.process && filters.stage;
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12">
-      <div className="text-center mb-16">
-        <h1 className="text-5xl font-bold text-gray-900 mb-6 font-serif">Explore Use Cases</h1>
-        <p className="text-xl text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
-        <div className="w-24 h-1 gold-accent mx-auto mt-6"></div>
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">Explore Use Cases</h1>
+        <p className="text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
+        <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
       </div>
 
-      <div className="bg-white classic-shadow-lg classic-border p-12 mb-12">
-        <div className="grid md:grid-cols-4 gap-8 mb-12">
+      <div className="bg-white classic-shadow-lg classic-border p-8 mb-12 rounded-lg">
+        <div className="grid md:grid-cols-4 gap-6 mb-10">
           {/* Step 1: Sector */}
-          <div className="space-y-4">
-            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest">
               Step 1: Select Sector
             </label>
             <div className="relative">
               <select
                 value={filters.sector}
                 onChange={(e) => handleFilterChange('sector', e.target.value)}
-                className="w-full classic-input appearance-none pr-12 font-medium"
+                className="w-full classic-input appearance-none pr-10 font-medium text-sm"
               >
                 <option value="">Choose sector...</option>
                 {sectors.map(sector => (
@@ -564,13 +544,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
             </div>
           </div>
 
           {/* Step 2: Domain */}
-          <div className="space-y-4">
-            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest">
               Step 2: Select a Domain
             </label>
             <div className="relative">
@@ -578,7 +558,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 value={filters.domain}
                 onChange={(e) => handleFilterChange('domain', e.target.value)}
                 disabled={!filters.sector}
-                className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
+                className="w-full classic-input appearance-none pr-10 disabled:bg-gray-100 disabled:text-gray-500 font-medium text-sm"
               >
                 <option value="">Choose domain...</option>
                 {domains.map(domain => (
@@ -587,13 +567,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
             </div>
           </div>
 
           {/* Step 3: Key Functional Areas */}
-          <div className="space-y-4">
-            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest">
               Step 3: Select Key Functional Area
             </label>
             <div className="relative">
@@ -601,7 +581,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 value={filters.process}
                 onChange={(e) => handleFilterChange('process', e.target.value)}
                 disabled={!filters.domain}
-                className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
+                className="w-full classic-input appearance-none pr-10 disabled:bg-gray-100 disabled:text-gray-500 font-medium text-sm"
               >
                 <option value="">Choose area...</option>
                 {processes.map((area: string) => (
@@ -610,13 +590,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
             </div>
           </div>
 
           {/* Step 4: Stage */}
-          <div className="space-y-4">
-            <label className="block text-sm font-bold text-gray-800 uppercase tracking-widest">
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest">
               Step 4: Select a Stage
             </label>
             <div className="relative">
@@ -624,7 +604,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 value={filters.stage}
                 onChange={(e) => handleFilterChange('stage', e.target.value)}
                 disabled={!filters.process}
-                className="w-full classic-input appearance-none pr-12 disabled:bg-gray-100 disabled:text-gray-500 font-medium"
+                className="w-full classic-input appearance-none pr-10 disabled:bg-gray-100 disabled:text-gray-500 font-medium text-sm"
               >
                 <option value="">Choose stage...</option>
                 {stages.map((stage: string) => (
@@ -633,26 +613,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-6 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <button
             onClick={resetFilters}
-            className="flex items-center justify-center space-x-3 classic-button-secondary"
+            className="flex items-center justify-center space-x-2 classic-button-secondary"
           >
-            <RotateCcw className="h-5 w-5" />
+            <RotateCcw className="h-4 w-4" />
             <span>Reset Filters</span>
           </button>
 
           <button
             onClick={handleGenerateStrategy}
             disabled={!canGenerate || isGenerating}
-            className="flex items-center justify-center space-x-3 classic-button-primary disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="flex items-center justify-center space-x-2 classic-button-primary disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:bg-gray-400"
           >
-            <Sparkles className="h-5 w-5" />
+            <Sparkles className="h-4 w-4" />
             <span>{isGenerating ? 'Generating Strategy...' : 'Generate My Strategy'}</span>
           </button>
           
@@ -688,15 +668,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
                 alert('Error saving data to database');
               }
             }}
-            className="flex items-center justify-center space-x-3 classic-button-secondary"
+            className="flex items-center justify-center space-x-2 classic-button-secondary"
           >
-            <Save className="h-5 w-5" />
+            <Save className="h-4 w-4" />
             <span>Save Data to Server</span>
           </button>
         </div>
 
         {canGenerate && !isGenerating && (
-          <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900">
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 rounded-r-lg">
             <p className="text-blue-900 text-sm font-semibold tracking-wide">
               Ready to generate strategy for: <strong>{filters.sector}</strong> → <strong>{filters.domain}</strong> → <strong>{filters.process}</strong> → <strong>{filters.stage}</strong>
             </p>
@@ -704,10 +684,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy }) => {
         )}
 
         {isGenerating && (
-          <div className="mt-8 p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 classic-shadow">
-            <div className="flex items-center justify-center space-x-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-3 border-blue-900"></div>
-              <p className="text-blue-900 font-bold tracking-wide">Analyzing your selection and generating AI strategy recommendations...</p>
+          <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 classic-shadow rounded-r-lg">
+            <div className="flex items-center justify-center space-x-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-900"></div>
+              <p className="text-blue-900 font-bold tracking-wide text-sm">Analyzing your selection and generating AI strategy recommendations...</p>
             </div>
           </div>
         )}

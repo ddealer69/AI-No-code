@@ -61,6 +61,7 @@ function AppContent() {
               }
               setCurrentView('ai');
             }}
+            onViewPrevious={() => setCurrentView('dashboard')}
             onRestart={handleRestart}
           />
         ) : null;
@@ -76,6 +77,7 @@ function AppContent() {
               }
               setCurrentView('real');
             }}
+            onViewPrevious={() => setCurrentView('matched')}
             onRestart={handleRestart}
             realUseCasesData={realUseCasesData}
           />
@@ -86,6 +88,7 @@ function AppContent() {
           <RealUseCasesPage
             useCases={strategyData.realUseCases}
             onRestart={handleRestart}
+            onViewPrevious={() => setCurrentView('ai')}
             realUseCasesData={realUseCasesData}
           />
         ) : null;

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Download, Mail, RotateCcw, Building2, Target, TrendingUp } from 'lucide-react';
+import { Download, Mail, RotateCcw, Building2, Target, TrendingUp, ArrowLeft } from 'lucide-react';
 import { RealUseCase } from '../types';
 
 interface RealUseCasesPageProps {
   useCases: { [key: string]: RealUseCase };
   onRestart: () => void;
+  onViewPrevious: () => void;
   strategy?: {
     businessProcess: string;
     functionalAreas: string[];
@@ -22,6 +23,7 @@ const supabase = createClient(
 const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
   useCases,
   onRestart,
+  onViewPrevious,
   strategy,
   realUseCasesData
 }) => {
@@ -66,6 +68,28 @@ const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
       const matchUC = bpText.includes(useCaseOut) || bpText.includes('- ' + useCaseOut) || bpText.includes('-- ' + useCaseOut);
       return matchBP && matchFA && matchUC;
     });
+  };
+
+  // Helper function to format text with bold headings
+  const formatTextWithBoldHeadings = (text: string) => {
+    if (!text) return text;
+    
+    // Define patterns to make bold
+    const patterns = [
+      'How AI Was Applied:',
+      'Continuous Learning:',
+      'Outcome:'
+    ];
+    
+    // Split text into parts and reconstruct with bold formatting
+    let formattedText = text;
+    
+    patterns.forEach(pattern => {
+      const regex = new RegExp(`(${pattern})`, 'gi');
+      formattedText = formattedText.replace(regex, `<strong>$1</strong>`);
+    });
+    
+    return formattedText;
   };
 
   // Use dynamic strategy from props if provided
@@ -127,6 +151,14 @@ Details: ${useCase.BP || 'No details available'}
           </button>
 
           <button
+            onClick={onViewPrevious}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>See Previous</span>
+          </button>
+
+          <button
             onClick={onRestart}
             className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
@@ -172,6 +204,42 @@ Details: ${useCase.BP || 'No details available'}
                     </div>
                   </div>
 
+                  {/* Real Project 1 with formatted text */}
+                  {useCase['Real Project 1'] && (
+                    <div className="flex items-start space-x-3">
+                      <Target className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-2">Real Project 1</h3>
+                        <div className="bg-blue-50 rounded-lg p-4">
+                          <div 
+                            className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-sans"
+                            dangerouslySetInnerHTML={{ 
+                              __html: formatTextWithBoldHeadings(useCase['Real Project 1']) 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Real Project 2 with formatted text */}
+                  {useCase['Real Project 2'] && (
+                    <div className="flex items-start space-x-3">
+                      <Target className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-2">Real Project 2</h3>
+                        <div className="bg-green-50 rounded-lg p-4">
+                          <div 
+                            className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-sans"
+                            dangerouslySetInnerHTML={{ 
+                              __html: formatTextWithBoldHeadings(useCase['Real Project 2']) 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Additional fields if they exist */}
                   {useCase.Company && (
                     <div className="flex items-start space-x-3">
@@ -195,13 +263,13 @@ Details: ${useCase.BP || 'No details available'}
 
                   {/* Display any other fields that might be in the data */}
                   {Object.entries(useCase).map(([key, value]) => {
-                    if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && value) {
+                    if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && key !== 'Real Project 1' && key !== 'Real Project 2' && value) {
                       return (
                         <div key={key} className="flex items-start space-x-3">
                           <div className="h-5 w-5 bg-gray-300 rounded-full mt-0.5 flex-shrink-0"></div>
                           <div>
                             <h4 className="font-semibold text-gray-900 mb-1 capitalize">{key.replace(/_/g, ' ')}</h4>
-                            <p className="text-gray-600">{String(value)}</p>
+                            <p className="text-gray-600 text-justify">{String(value)}</p>
                           </div>
                         </div>
                       );
@@ -227,11 +295,20 @@ Details: ${useCase.BP || 'No details available'}
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
+            onClick={onViewPrevious}
+            className="flex items-center space-x-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>See Previous</span>
+          </button>
+          
+          <button
             onClick={handleExport}
             className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
           >
             Download Complete Report
           </button>
+          
           <button
             onClick={onRestart}
             className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"

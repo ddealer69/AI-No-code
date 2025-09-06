@@ -38,13 +38,13 @@
   }
   
   .classic-input {
-    @apply border-2 border-gray-200 bg-white px-4 py-3 rounded-none focus:border-blue-900 focus:ring-0 transition-all duration-200;
+    @apply border-2 border-gray-200 bg-white px-4 py-3 rounded-lg focus:border-blue-900 focus:ring-0 transition-all duration-200;
     font-weight: 500;
     letter-spacing: 0.01em;
   }
   
   .classic-button {
-    @apply px-8 py-4 font-semibold tracking-wide uppercase text-sm transition-all duration-300 rounded-none;
+    @apply px-6 py-3 font-semibold tracking-wide uppercase text-sm transition-all duration-300 rounded-lg;
     letter-spacing: 0.1em;
   }
   
