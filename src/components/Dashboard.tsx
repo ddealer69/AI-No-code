@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, Save } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, Save, CheckCircle2 } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
 import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
 
 interface DashboardProps {
-  onGenerateStrategy: () => void;
+  onGenerateStrategy: (response: StrategyResponse) => void;
   onStartAnalysis: () => void;
   initialTab?: 'identification' | 'implementation' | 'financials';
 }
@@ -14,6 +14,8 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalysis, initialTab = 'identification' }) => {
   // Tab navigation state
   const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>(initialTab);
+  // Strategy data state
+  const [generatedStrategy, setGeneratedStrategy] = useState<StrategyResponse | null>(null);
   
   const [filters, setFilters] = useState<FilterData>({
     sector: '',
@@ -511,7 +513,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
       
       // Print and save the generated strategy output
       console.log('Generated AI Strategy Output:', response);
-      onGenerateStrategy();
+      setGeneratedStrategy(response);
+      setActiveTab('implementation');
+      onGenerateStrategy(response);
     } catch (err) {
       console.error('Failed to generate strategy:', err);
     } finally {
@@ -759,12 +763,140 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
       )}
 
       {activeTab === 'implementation' && (
-        <div className="text-center py-20">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Implementation Phase</h2>
-          <p className="text-gray-600 mb-8">Implementation tools and resources coming soon...</p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 max-w-2xl mx-auto">
-            <p className="text-blue-800">This section will contain implementation guides, project templates, and execution tools for your AI transformation journey.</p>
-          </div>
+        <div className="py-8">
+          {generatedStrategy ? (
+            <div className="space-y-8">
+              <div className="text-center mb-10">
+                <h2 className="text-4xl font-bold text-gray-900 mb-4 font-serif">AI Strategy Implementation</h2>
+                <p className="text-lg text-gray-600 font-medium tracking-wide">Your personalized AI transformation roadmap</p>
+                <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
+              </div>
+
+              {/* Strategy Content */}
+              <div className="grid gap-8">
+                {/* Matched Use Cases Section */}
+                {Object.keys(generatedStrategy.matchedUseCases).length > 0 && (
+                  <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                      <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
+                      Matched Business Use Cases
+                    </h3>
+                    <div className="grid gap-6">
+                      {Object.entries(generatedStrategy.matchedUseCases).map(([key, useCase]: [string, any]) => (
+                        <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2">Business Process</h4>
+                              <p className="text-gray-700 mb-4">{useCase.businessProcess}</p>
+                              
+                              <h4 className="font-semibold text-gray-900 mb-2">Job Role</h4>
+                              <p className="text-gray-700">{useCase.jobRole}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2">AI Use Case</h4>
+                              <p className="text-gray-700 mb-4">{useCase.aiUseCase}</p>
+                              
+                              <h4 className="font-semibold text-gray-900 mb-2">Expected Impact</h4>
+                              <p className="text-gray-700">{useCase.impact}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Use Cases Section */}
+                {Object.keys(generatedStrategy.aiUseCases).length > 0 && (
+                  <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                      <Sparkles className="w-6 h-6 mr-3 text-blue-600" />
+                      AI Implementation Details
+                    </h3>
+                    <div className="grid gap-6">
+                      {Object.entries(generatedStrategy.aiUseCases).map(([key, aiCase]: [string, any]) => (
+                        <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <h4 className="font-semibold text-gray-900 mb-3">{aiCase.useCase}</h4>
+                          
+                          <div className="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <span className="text-sm font-medium text-gray-500">AI System Type:</span>
+                              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                                {aiCase.aiSystemType}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-500">Custom Development:</span>
+                              <span className={`ml-2 px-2 py-1 rounded text-sm ${
+                                aiCase.customDev 
+                                  ? 'bg-orange-100 text-orange-800' 
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {aiCase.customDev ? 'Required' : 'Not Required'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {aiCase.tools && aiCase.tools.length > 0 && (
+                            <div className="mb-4">
+                              <span className="text-sm font-medium text-gray-500 block mb-2">Recommended Tools:</span>
+                              <div className="flex flex-wrap gap-2">
+                                {aiCase.tools.map((tool: string, index: number) => (
+                                  <span key={index} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                                    {tool}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {aiCase.implementationNotes && (
+                            <div>
+                              <span className="text-sm font-medium text-gray-500 block mb-2">Implementation Notes:</span>
+                              <p className="text-gray-700 text-sm">{aiCase.implementationNotes}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-center space-x-4 mt-8">
+                  <button
+                    onClick={() => {
+                      setActiveTab('identification');
+                      setGeneratedStrategy(null);
+                    }}
+                    className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Generate New Strategy
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('financials')}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Proceed to Financial Analysis
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-20">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Implementation Phase</h2>
+              <p className="text-gray-600 mb-8">Generate an AI strategy from the Identification tab to see your implementation roadmap.</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 max-w-2xl mx-auto">
+                <p className="text-blue-800">Once you generate a strategy, this section will contain your personalized implementation guides, AI use cases, and execution roadmap.</p>
+              </div>
+              <button
+                onClick={() => setActiveTab('identification')}
+                className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Go to Identification
+              </button>
+            </div>
+          )}
         </div>
       )}
 

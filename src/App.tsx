@@ -44,7 +44,9 @@ function AppContent() {
     };
     
     setStrategyData(validResponse);
-    setCurrentView('matched');
+    // Switch to implementation tab instead of matched view
+    setActiveTab('implementation');
+    setCurrentView('dashboard');
   };
 
   const handleNavigateToTab = (tab: 'identification' | 'implementation' | 'financials') => {
