@@ -1,12 +1,13 @@
 import React from 'react';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Calculator } from 'lucide-react';
 import { FutureStateAnalysis, FutureScoreBreakdown, FUTURE_SCORING_OPTIONS } from '../../types/futureStateAnalysis';
 
 const FutureStep8Investment: React.FC<{
   data: FutureStateAnalysis;
   updateData: (section: string, data: any) => void;
   scores: FutureScoreBreakdown;
-}> = ({ data, updateData }) => {
+  onOpenROICalculator?: () => void;
+}> = ({ data, updateData, onOpenROICalculator }) => {
   const handleChange = (field: string, value: number) => {
     updateData('investmentPlanning', { [field]: value });
   };
@@ -44,6 +45,22 @@ const FutureStep8Investment: React.FC<{
             </select>
           </div>
         ))}
+      </div>
+
+      {/* ROI Calculator Button */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200 text-center">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready for ROI Analysis?</h3>
+        <p className="text-gray-600 mb-4">Calculate the return on investment for your AI transformation</p>
+        
+        {onOpenROICalculator && (
+          <button
+            onClick={onOpenROICalculator}
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-semibold shadow-md transition-all duration-200"
+          >
+            <Calculator className="w-5 h-5 mr-2" />
+            Calculate AI ROI
+          </button>
+        )}
       </div>
     </div>
   );

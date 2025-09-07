@@ -19,7 +19,6 @@ type ViewState = 'login' | 'signup' | 'dashboard' | 'matched' | 'ai' | 'real' | 
 function AppContent() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
-  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>('identification');
   const [strategyData, setStrategyData] = useState<StrategyResponse | null>(null);
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>([]);
   const [analysisData, setAnalysisData] = useState<{ analysis: CurrentStateAnalysis; scores: ScoreBreakdown } | null>(null);
@@ -48,12 +47,12 @@ function AppContent() {
   };
 
   const handleNavigateToTab = (tab: 'identification' | 'implementation' | 'financials') => {
-    setActiveTab(tab);
     switch (tab) {
       case 'identification':
         setCurrentView('dashboard');
         break;
       case 'implementation':
+        // Stay on dashboard but show implementation content
         setCurrentView('dashboard');
         break;
       case 'financials':
@@ -73,7 +72,6 @@ function AppContent() {
         return <Dashboard 
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
-          initialTab={activeTab}
         />;
       
       case 'analysis':
@@ -97,7 +95,7 @@ function AppContent() {
               setCurrentView('dashboard');
               alert(`Future State Planning complete! Total score: ${scores.total}/302 - ${scores.outcome}`);
             }}
-            currentAnalysis={analysisData || undefined}
+            currentAnalysis={analysisData}
             onNavigateToTab={handleNavigateToTab}
           />
         );
@@ -149,7 +147,6 @@ function AppContent() {
         return <Dashboard 
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
-          initialTab={activeTab}
         />;
     }
   };

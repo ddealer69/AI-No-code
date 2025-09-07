@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Target, CheckCircle2 } from 'lucide-react';
 import { FutureStateAnalysis, FutureScoreBreakdown } from '../types/futureStateAnalysis';
+import { CurrentStateAnalysis, ScoreBreakdown } from '../types/currentStateAnalysis';
 import FutureScoreDashboard from './FutureScoreDashboard';
 import FutureStep1Vision from './futureSteps/FutureStep1Vision';
 import FutureStep2ProcessImprovement from './futureSteps/FutureStep2ProcessImprovement';
@@ -10,15 +11,19 @@ import FutureStep5BusinessImpact from './futureSteps/FutureStep5BusinessImpact';
 import FutureStep6Productivity from './futureSteps/FutureStep6Productivity';
 import FutureStep7Implementation from './futureSteps/FutureStep7Implementation';
 import FutureStep8Investment from './futureSteps/FutureStep8Investment';
+import AIROICalculator from './AIROICalculator';
 import FutureStep9Risk from './futureSteps/FutureStep9Risk';
 import FutureStep10Review from './futureSteps/FutureStep10Review';
 
 interface FutureStateAnalysisProps {
   onComplete: (analysis: FutureStateAnalysis, scores: FutureScoreBreakdown) => void;
+  currentAnalysis?: { analysis: CurrentStateAnalysis; scores: ScoreBreakdown };
+  onNavigateToTab?: (tab: 'identification' | 'implementation' | 'financials') => void;
 }
 
-const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onComplete }) => {
+const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onComplete, currentAnalysis, onNavigateToTab }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [showROICalculator, setShowROICalculator] = useState(false);
   const [formData, setFormData] = useState<FutureStateAnalysis>({
     companyVision: {
       visionStatement: '',
@@ -193,13 +198,37 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Navigation Tabs */}
+        <div className="mb-8">
+          <nav className="flex justify-center">
+            <div className="flex space-x-8 border-b border-gray-200">
+              <button 
+                onClick={() => onNavigateToTab?.('identification')}
+                className="py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm"
+              >
+                Identification
+              </button>
+              <button className="py-2 px-1 border-b-2 border-purple-500 text-purple-600 font-medium text-sm cursor-default">
+                Implementation
+              </button>
+              <button 
+                onClick={() => onNavigateToTab?.('financials')}
+                className="py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm"
+              >
+                Financials
+              </button>
+            </div>
+          </nav>
+        </div>
+
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif flex items-center justify-center">
             <Target className="w-8 h-8 mr-3 text-purple-600" />
             Future State Analysis
           </h1>
-          <p className="text-gray-600">Strategic planning for your AI-powered transformation journey</p>
+          <p className="text-lg text-gray-600 font-medium tracking-wide">Strategic planning for your AI-powered transformation journey</p>
+          <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
         </div>
 
         <div className="flex gap-8">
@@ -248,11 +277,20 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
             {/* Step Content */}
             <div className="bg-white rounded-lg shadow-lg p-8 mb-8 border border-purple-100">
               {StepComponent && (
-                <StepComponent
-                  data={formData}
-                  updateData={updateFormData}
-                  scores={scores}
-                />
+                currentStep === 8 ? (
+                  <StepComponent
+                    data={formData}
+                    updateData={updateFormData}
+                    scores={scores}
+                    onOpenROICalculator={() => setShowROICalculator(true)}
+                  />
+                ) : (
+                  <StepComponent
+                    data={formData}
+                    updateData={updateFormData}
+                    scores={scores}
+                  />
+                )
               )}
             </div>
 
@@ -293,6 +331,30 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
           </div>
         </div>
       </div>
+
+      {/* ROI Calculator Modal */}
+      {showROICalculator && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">AI ROI Calculator</h2>
+              <button
+                onClick={() => setShowROICalculator(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6">
+              <AIROICalculator
+                onClose={() => setShowROICalculator(false)}
+                futureAnalysis={{ analysis: formData, scores }}
+                currentAnalysis={currentAnalysis}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,11 +6,15 @@ import { saveToLocalStorage } from '../utils/jsonStorage';
 import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
 
 interface DashboardProps {
-  onGenerateStrategy: (response: StrategyResponse) => void;
-  onStartAnalysis?: () => void;
+  onGenerateStrategy: () => void;
+  onStartAnalysis: () => void;
+  initialTab?: 'identification' | 'implementation' | 'financials';
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalysis }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalysis, initialTab = 'identification' }) => {
+  // Tab navigation state
+  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>(initialTab);
+  
   const [filters, setFilters] = useState<FilterData>({
     sector: '',
     domain: '',
@@ -507,7 +511,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
       
       // Print and save the generated strategy output
       console.log('Generated AI Strategy Output:', response);
-      onGenerateStrategy(response);
+      onGenerateStrategy();
     } catch (err) {
       console.error('Failed to generate strategy:', err);
     } finally {
@@ -519,11 +523,57 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">Explore Use Cases</h1>
-        <p className="text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
-        <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
+      {/* Tab Navigation */}
+      <div className="mb-8">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex justify-center space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('identification')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'identification'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } transition-colors duration-200`}
+            >
+              Identification
+            </button>
+            <button
+              onClick={() => setActiveTab('implementation')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'implementation'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } transition-colors duration-200`}
+            >
+              Implementation
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('financials');
+                if (onStartAnalysis) {
+                  onStartAnalysis();
+                }
+              }}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'financials'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } transition-colors duration-200`}
+            >
+              Financials
+            </button>
+          </nav>
+        </div>
       </div>
+
+      {/* Tab Content */}
+      {activeTab === 'identification' && (
+        <>
+          <div className="text-center mb-10">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">Explore Use Cases</h1>
+            <p className="text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
+            <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
+          </div>
 
       <div className="bg-white classic-shadow-lg classic-border p-8 mb-12 rounded-lg">
         <div className="grid md:grid-cols-4 gap-6 mb-10">
@@ -705,6 +755,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
           </div>
         )}
       </div>
+        </>
+      )}
+
+      {activeTab === 'implementation' && (
+        <div className="text-center py-20">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Implementation Phase</h2>
+          <p className="text-gray-600 mb-8">Implementation tools and resources coming soon...</p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 max-w-2xl mx-auto">
+            <p className="text-blue-800">This section will contain implementation guides, project templates, and execution tools for your AI transformation journey.</p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'financials' && (
+        <div className="text-center py-20">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Financial Analysis</h2>
+          <p className="text-gray-600 mb-8">Click the button below to start your comprehensive financial analysis.</p>
+          {onStartAnalysis && (
+            <button
+              onClick={onStartAnalysis}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+            >
+              Start Financial Analysis
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

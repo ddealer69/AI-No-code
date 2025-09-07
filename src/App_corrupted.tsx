@@ -19,7 +19,6 @@ type ViewState = 'login' | 'signup' | 'dashboard' | 'matched' | 'ai' | 'real' | 
 function AppContent() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
-  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>('identification');
   const [strategyData, setStrategyData] = useState<StrategyResponse | null>(null);
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>([]);
   const [analysisData, setAnalysisData] = useState<{ analysis: CurrentStateAnalysis; scores: ScoreBreakdown } | null>(null);
@@ -47,14 +46,13 @@ function AppContent() {
     setCurrentView('matched');
   };
 
-  const handleNavigateToTab = (tab: 'identification' | 'implementation' | 'financials') => {
-    setActiveTab(tab);
+  const handleTabNavigation = (tab: 'identification' | 'implementation' | 'financials') => {
     switch (tab) {
       case 'identification':
         setCurrentView('dashboard');
         break;
       case 'implementation':
-        setCurrentView('dashboard');
+        setCurrentView('future-analysis');
         break;
       case 'financials':
         setCurrentView('analysis');
@@ -73,7 +71,6 @@ function AppContent() {
         return <Dashboard 
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
-          initialTab={activeTab}
         />;
       
       case 'analysis':
@@ -81,11 +78,13 @@ function AppContent() {
           <CurrentStateAnalysisWizard
             onComplete={(analysis, scores) => {
               setAnalysisData({ analysis, scores });
+              // You can redirect to results or back to dashboard
               setCurrentView('dashboard');
+              // Show success message or redirect to results view
               alert(`Analysis complete! Total score: ${scores.total}/300 - ${scores.outcome}`);
             }}
             onStartFutureAnalysis={() => setCurrentView('future-analysis')}
-            onNavigateToTab={handleNavigateToTab}
+            onNavigateToTab={handleTabNavigation}
           />
         );
       
@@ -94,11 +93,12 @@ function AppContent() {
           <FutureStateAnalysisWizard
             onComplete={(analysis, scores) => {
               setFutureAnalysisData({ analysis, scores });
+              // You can redirect to results or back to dashboard
               setCurrentView('dashboard');
+              // Show success message or redirect to results view
               alert(`Future State Planning complete! Total score: ${scores.total}/302 - ${scores.outcome}`);
             }}
             currentAnalysis={analysisData || undefined}
-            onNavigateToTab={handleNavigateToTab}
           />
         );
       
@@ -149,7 +149,6 @@ function AppContent() {
         return <Dashboard 
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
-          initialTab={activeTab}
         />;
     }
   };
