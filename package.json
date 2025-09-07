@@ -3,16 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://ddealer69.github.io/AI-No-code/",
   "scripts": {
     "dev": "vite",
     "server": "node src/server/index.js",
     "dev:full": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.0",
