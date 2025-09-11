@@ -233,7 +233,10 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
         </button>
         
         <button
-          onClick={() => onViewAIUseCases(realUseCasesData)}
+          onClick={() => {
+            console.log('Passing real use cases data to next view:', realUseCasesData);
+            onViewAIUseCases(realUseCasesData);
+          }}
           className="classic-button-primary"
         >
           View AI Implementation Details

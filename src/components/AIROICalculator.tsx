@@ -150,7 +150,7 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
 <head>
     <title>AI Transformation Analysis & ROI Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        body { font-family: 'Albert Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 20px; line-height: 1.6; }
         h1, h2, h3 { color: #333; }
         .header { text-align: center; margin-bottom: 30px; }
         .section { margin-bottom: 20px; }

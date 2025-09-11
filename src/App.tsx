@@ -76,6 +76,7 @@ function AppContent() {
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
           initialTab={activeTab}
+          realUseCasesData={realUseCasesData}
         />;
       
       case 'analysis':
@@ -152,6 +153,7 @@ function AppContent() {
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
           initialTab={activeTab}
+          realUseCasesData={realUseCasesData}
         />;
     }
   };

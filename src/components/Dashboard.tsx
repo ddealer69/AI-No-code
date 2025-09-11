@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, Save, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, Save, CheckCircle2, Target, Building2, TrendingUp } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
@@ -9,13 +9,30 @@ interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
   onStartAnalysis: () => void;
   initialTab?: 'identification' | 'implementation' | 'financials';
+  realUseCasesData?: any[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalysis, initialTab = 'identification' }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  onGenerateStrategy, 
+  onStartAnalysis, 
+  initialTab = 'identification',
+  realUseCasesData: propRealUseCasesData = []
+}) => {
   // Tab navigation state
   const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>(initialTab);
   // Strategy data state
   const [generatedStrategy, setGeneratedStrategy] = useState<StrategyResponse | null>(null);
+  // Real use cases data from Supabase
+  const [realUseCasesData, setRealUseCasesData] = useState<any[]>(propRealUseCasesData);
+  const [loadingRealUseCases, setLoadingRealUseCases] = useState(false);
+  
+  // If we receive real use cases data from props, use it
+  useEffect(() => {
+    if (propRealUseCasesData && propRealUseCasesData.length > 0) {
+      setRealUseCasesData(propRealUseCasesData);
+      console.log("Received real use cases data from props:", propRealUseCasesData);
+    }
+  }, [propRealUseCasesData]);
   
   const [filters, setFilters] = useState<FilterData>({
     sector: '',
@@ -175,6 +192,84 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
 
   const resetFilters = () => {
     setFilters({ sector: '', domain: '', process: '', stage: '' });
+  };
+
+  // Helper function to format text with bold headings
+  const formatTextWithBoldHeadings = (text: string) => {
+    if (!text) return text;
+    
+    // Define patterns to make bold
+    const patterns = [
+      'How AI Was Applied:',
+      'Continuous Learning:',
+      'Outcome:'
+    ];
+    
+    // Split text into parts and reconstruct with bold formatting
+    let formattedText = text;
+    
+    patterns.forEach(pattern => {
+      const regex = new RegExp(`(${pattern})`, 'gi');
+      formattedText = formattedText.replace(regex, '<strong>$1</strong>');
+    });
+    
+    return formattedText;
+  };
+
+  // Search BP column for real use cases matching the given use case
+  const searchRealUseCases = async (useCase: any) => {
+    if (!useCase || !useCase.businessProcess) return;
+    
+    setLoadingRealUseCases(true);
+    
+    try {
+      // Search in Service_Real_Cases first
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('Service_Real_Cases')
+        .select('*')
+        .ilike('BP', `%${useCase.businessProcess}%`)
+        .ilike('BP', `%${useCase.functionalAreas?.[0] || ''}%`)
+        .ilike('BP', `%${useCase.aiUseCase || ''}%`);
+
+      if (serviceError) {
+        console.error('Service BP search error:', serviceError);
+      } else {
+        console.log('Service BP search result:', serviceData);
+        if (serviceData && serviceData.length > 0) {
+          setRealUseCasesData(serviceData);
+          setLoadingRealUseCases(false);
+          return;
+        }
+      }
+
+      // If no data found in Service_Real_Cases, search in Manufacturing_Real_Cases
+      const { data: manufacturingData, error: manufacturingError } = await supabase
+        .from('Manufacturing_Real_Cases')
+        .select('*')
+        .ilike('BP', `%${useCase.businessProcess}%`)
+        .ilike('BP', `%${useCase.functionalAreas?.[0] || ''}%`)
+        .ilike('BP', `%${useCase.aiUseCase || ''}%`);
+
+      if (manufacturingError) {
+        console.error('Manufacturing BP search error:', manufacturingError);
+      } else {
+        console.log('Manufacturing BP search result:', manufacturingData);
+        if (manufacturingData && manufacturingData.length > 0) {
+          setRealUseCasesData(manufacturingData);
+          setLoadingRealUseCases(false);
+          return;
+        }
+      }
+
+      // If no data found in either table, set empty array
+      setRealUseCasesData([]);
+      
+    } catch (error) {
+      console.error('Error searching BP:', error);
+      setRealUseCasesData([]);
+    } finally {
+      setLoadingRealUseCases(false);
+    }
   };
 
   const handleGenerateStrategy = async () => {
@@ -514,6 +609,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
       // Print and save the generated strategy output
       console.log('Generated AI Strategy Output:', response);
       setGeneratedStrategy(response);
+      
+      // Search for real use cases based on the first matched use case
+      if (response.matchedUseCases && Object.keys(response.matchedUseCases).length > 0) {
+        const firstUseCase = response.matchedUseCases[Object.keys(response.matchedUseCases)[0]];
+        await searchRealUseCases(firstUseCase);
+      }
+      
       setActiveTab('implementation');
       onGenerateStrategy(response);
     } catch (err) {
@@ -858,6 +960,126 @@ const Dashboard: React.FC<DashboardProps> = ({ onGenerateStrategy, onStartAnalys
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Real Use Cases Section */}
+                {realUseCasesData.length > 0 && (
+                  <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                      <Target className="w-6 h-6 mr-3 text-purple-600" />
+                      Real World Implementation Examples
+                    </h3>
+                    <div className="space-y-6">
+                      {realUseCasesData.map((useCase) => (
+                        <div
+                          key={useCase.id}
+                          className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                        >
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b mb-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Building2 className="h-6 w-6 text-blue-600" />
+                                <h2 className="text-xl font-bold text-gray-900">{useCase.Company || 'Company Example'}</h2>
+                              </div>
+                              <div className="text-sm text-blue-600 font-medium">
+                                Real World Implementation
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-5">
+                            <div>
+                              <h3 className="font-semibold text-gray-900 mb-2">Business Case Details</h3>
+                              <div className="bg-gray-50 rounded-lg p-5">
+                                <div className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">
+                                  {useCase.BP ? useCase.BP.split('\n').map((line: string, idx: number) => (
+                                    <p key={idx} className="mb-2">{line}</p>
+                                  )) : 'No details available'}
+                                </div>
+                              </div>
+                            </div>
+
+                            {useCase['Real Project 1'] && (
+                              <div>
+                                <h3 className="font-semibold text-gray-900 mb-2">Project Implementation 1</h3>
+                                <div className="bg-blue-50 rounded-lg p-5">
+                                  <div 
+                                    className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
+                                    dangerouslySetInnerHTML={{ 
+                                      __html: formatTextWithBoldHeadings(useCase['Real Project 1']) 
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {useCase['Real Project 2'] && (
+                              <div>
+                                <h3 className="font-semibold text-gray-900 mb-2">Project Implementation 2</h3>
+                                <div className="bg-green-50 rounded-lg p-5">
+                                  <div 
+                                    className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
+                                    dangerouslySetInnerHTML={{ 
+                                      __html: formatTextWithBoldHeadings(useCase['Real Project 2']) 
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Additional Information Section */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                              {useCase.Sector && (
+                                <div className="bg-indigo-50 p-4 rounded-lg">
+                                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
+                                    <TrendingUp className="h-4 w-4 text-indigo-600 mr-2" />
+                                    Sector
+                                  </h4>
+                                  <p className="text-gray-700">{useCase.Sector}</p>
+                                </div>
+                              )}
+                              
+                              {useCase.Industry && (
+                                <div className="bg-purple-50 p-4 rounded-lg">
+                                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
+                                    <Building2 className="h-4 w-4 text-purple-600 mr-2" />
+                                    Industry
+                                  </h4>
+                                  <p className="text-gray-700">{useCase.Industry}</p>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Display any other fields from the real use case */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
+                              {Object.entries(useCase).map(([key, value]: [string, any]) => {
+                                // Skip fields we've already rendered or empty values
+                                if (['BP', 'Company', 'Sector', 'Industry', 'id', 'Real Project 1', 'Real Project 2'].includes(key) || !value) {
+                                  return null;
+                                }
+                                return (
+                                  <div key={key} className="bg-gray-50 p-4 rounded-lg">
+                                    <h4 className="font-semibold text-gray-900 mb-2 capitalize">
+                                      {key.replace(/_/g, ' ')}
+                                    </h4>
+                                    <p className="text-gray-700">{String(value)}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {loadingRealUseCases && (
+                  <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">Loading real world implementation examples...</p>
                     </div>
                   </div>
                 )}
