@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, Save, CheckCircle2, Target, Building2, TrendingUp } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, Save, CheckCircle2, Target, Building2, TrendingUp, Filter } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
@@ -22,6 +22,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>(initialTab);
   // Strategy data state
   const [generatedStrategy, setGeneratedStrategy] = useState<StrategyResponse | null>(null);
+  // Metric filter state for implementation tab
+  const [selectedMetric, setSelectedMetric] = useState<string>('');
   // Real use cases data from Supabase
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>(propRealUseCasesData);
   const [loadingRealUseCases, setLoadingRealUseCases] = useState(false);
@@ -33,6 +35,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       console.log("Received real use cases data from props:", propRealUseCasesData);
     }
   }, [propRealUseCasesData]);
+
+  // Reset metric filter when switching tabs
+  useEffect(() => {
+    setSelectedMetric('');
+  }, [activeTab]);
   
   const [filters, setFilters] = useState<FilterData>({
     sector: '',
@@ -874,39 +881,109 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
               </div>
 
+              {/* Filter Controls */}
+              <div className="bg-white classic-shadow classic-border p-6 mb-8">
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                  <div className="flex items-center space-x-6">
+                    <Filter className="h-5 w-5 text-gray-600" />
+                    <span className="text-sm font-bold text-gray-800 uppercase tracking-widest">Filter by Value Metric:</span>
+                    <select
+                      value={selectedMetric}
+                      onChange={(e) => setSelectedMetric(e.target.value)}
+                      className="classic-input text-sm font-medium"
+                    >
+                      <option value="">All Metrics</option>
+                      <option value="Finance">Finance</option>
+                      <option value="Quality">Quality</option>
+                      <option value="Time">Time</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => setSelectedMetric('')}
+                    className="flex items-center space-x-3 classic-button-secondary text-xs"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span>Clear Filter</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Strategy Content */}
               <div className="grid gap-8">
                 {/* Matched Use Cases Section */}
-                {Object.keys(generatedStrategy.matchedUseCases).length > 0 && (
-                  <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                      <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
-                      Matched Business Use Cases
-                    </h3>
-                    <div className="grid gap-6">
-                      {Object.entries(generatedStrategy.matchedUseCases).map(([key, useCase]: [string, any]) => (
-                        <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-2">Business Process</h4>
-                              <p className="text-gray-700 mb-4">{useCase.businessProcess}</p>
-                              
-                              <h4 className="font-semibold text-gray-900 mb-2">Job Role</h4>
-                              <p className="text-gray-700">{useCase.jobRole}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-2">AI Use Case</h4>
-                              <p className="text-gray-700 mb-4">{useCase.aiUseCase}</p>
-                              
-                              <h4 className="font-semibold text-gray-900 mb-2">Expected Impact</h4>
-                              <p className="text-gray-700">{useCase.impact}</p>
+                {(() => {
+                  // Filter use cases by selected metric
+                  const filteredUseCases = Object.entries(generatedStrategy.matchedUseCases).filter(([key, useCase]: [string, any]) => {
+                    if (!selectedMetric) return true; // Show all if no filter selected
+                    return useCase.primaryMetric === selectedMetric || useCase.secondaryMetric === selectedMetric;
+                  });
+
+                  return filteredUseCases.length > 0 && (
+                    <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                        <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
+                        Matched Business Use Cases
+                        {selectedMetric && (
+                          <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                            Filtered by: {selectedMetric}
+                          </span>
+                        )}
+                      </h3>
+                      <div className="grid gap-6">
+                        {filteredUseCases.map(([key, useCase]: [string, any]) => (
+                          <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Business Process</h4>
+                                <p className="text-gray-700 mb-4">{useCase.businessProcess}</p>
+                                
+                                <h4 className="font-semibold text-gray-900 mb-2">Job Role</h4>
+                                <p className="text-gray-700 mb-4">{useCase.jobRole}</p>
+
+                                {/* Primary and Secondary Metrics */}
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Primary Metric</h4>
+                                    <span className="px-3 py-1 bg-green-50 text-green-800 text-xs font-bold uppercase tracking-wide border border-green-200 rounded">
+                                      {useCase.primaryMetric}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Secondary Metric</h4>
+                                    <span className="px-3 py-1 bg-orange-50 text-orange-800 text-xs font-bold uppercase tracking-wide border border-orange-200 rounded">
+                                      {useCase.secondaryMetric}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900 mb-2">AI Use Case</h4>
+                                <p className="text-gray-700 mb-4">{useCase.aiUseCase}</p>
+                                
+                                <h4 className="font-semibold text-gray-900 mb-2">Expected Impact</h4>
+                                <p className="text-gray-700 mb-4">{useCase.impact}</p>
+
+                                {/* Expected ROI */}
+                                <div className="pt-4 border-t border-gray-200">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Expected ROI:</span>
+                                    <span className="text-sm font-bold text-green-700 bg-green-50 px-3 py-1 border border-green-200 rounded">{useCase.expectedROI}</span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
+                        ))}
+                      </div>
+
+                      {filteredUseCases.length === 0 && selectedMetric && (
+                        <div className="text-center py-8">
+                          <p className="text-gray-500">No use cases match the selected metric: <strong>{selectedMetric}</strong></p>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* AI Use Cases Section */}
                 {Object.keys(generatedStrategy.aiUseCases).length > 0 && (
