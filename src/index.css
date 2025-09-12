@@ -35,7 +35,7 @@
   }
   
   .gold-accent {
-    background: linear-gradient(135deg, #d4af37 0%, #ffd700 50%, #d4af37 100%);
+    background: linear-gradient(135deg, #ec4899 0%, #f97316 50%, #fbbf24 100%);
   }
   
   .classic-input {
@@ -50,7 +50,15 @@
   }
   
   .classic-button-primary {
-    @apply classic-button bg-blue-900 text-white hover:bg-blue-800 classic-shadow;
+    @apply classic-button text-white classic-shadow;
+    background: linear-gradient(135deg, #ec4899 0%, #f97316 50%, #fbbf24 100%);
+    transition: all 0.3s ease;
+  }
+  
+  .classic-button-primary:hover {
+    background: linear-gradient(135deg, #f472b6 0%, #fb923c 50%, #fcd34d 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(236, 72, 153, 0.3);
   }
   
   .classic-button-secondary {

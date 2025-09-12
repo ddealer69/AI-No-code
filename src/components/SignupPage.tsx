@@ -75,38 +75,38 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-lg">AI</span>
+          <div className="w-16 h-16 premium-gradient flex items-center justify-center classic-shadow">
+            <span className="text-white font-bold text-2xl font-serif">AI</span>
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+        <h2 className="mt-8 text-center text-4xl font-bold text-gray-900 font-serif">
           Create your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Join the enterprise AI strategy platform
+        <p className="mt-3 text-center text-sm text-gray-600 uppercase tracking-widest font-medium">
+          Enterprise Intelligence Platform
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-lg rounded-lg sm:px-10">
+        <div className="bg-white py-12 px-8 classic-shadow-lg classic-border sm:px-12">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="flex items-center space-x-3 text-red-700 bg-red-50 p-4 border-l-4 border-red-500">
                 <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">{error}</span>
+                <span className="text-sm font-medium">{error}</span>
               </div>
             )}
 
             <div className="flex space-x-4">
               <div className="w-1/2">
-                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="first_name" className="block text-sm font-bold text-gray-800 uppercase tracking-wide mb-2">
                   First Name
                 </label>
                 <div className="mt-1 relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
                   <input
                     id="first_name"
                     name="first_name"
@@ -114,17 +114,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
                     required
                     value={formData.first_name}
                     onChange={handleChange}
-                    className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="pl-12 classic-input block w-full placeholder-gray-400 focus:outline-none"
                     placeholder="First name"
                   />
                 </div>
               </div>
               <div className="w-1/2">
-                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="last_name" className="block text-sm font-bold text-gray-800 uppercase tracking-wide mb-2">
                   Last Name
                 </label>
                 <div className="mt-1 relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
                   <input
                     id="last_name"
                     name="last_name"
@@ -132,7 +132,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
                     required
                     value={formData.last_name}
                     onChange={handleChange}
-                    className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="pl-12 classic-input block w-full placeholder-gray-400 focus:outline-none"
                     placeholder="Last name"
                   />
                 </div>
@@ -140,11 +140,11 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-bold text-gray-800 uppercase tracking-wide mb-2">
                 Email address
               </label>
               <div className="mt-1 relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Mail className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
                 <input
                   id="email"
                   name="email"
@@ -153,18 +153,18 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="pl-12 classic-input block w-full placeholder-gray-400 focus:outline-none"
                   placeholder="Enter your email"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-bold text-gray-800 uppercase tracking-wide mb-2">
                 Password
               </label>
               <div className="mt-1 relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
                 <input
                   id="password"
                   name="password"
@@ -172,18 +172,18 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="pl-12 classic-input block w-full placeholder-gray-400 focus:outline-none"
                   placeholder="Create a password"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-bold text-gray-800 uppercase tracking-wide mb-2">
                 Confirm Password
               </label>
               <div className="mt-1 relative">
-                <CheckCircle className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <CheckCircle className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -191,7 +191,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="pl-10 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="pl-12 classic-input block w-full placeholder-gray-400 focus:outline-none"
                   placeholder="Confirm your password"
                 />
               </div>
@@ -201,21 +201,23 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full classic-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Creating account...' : 'Create account'}
               </button>
             </div>
           </form>
 
-          <div className="mt-6 text-center">
-            <span className="text-sm text-gray-600">Already have an account? </span>
-            <button
-              onClick={onShowLogin}
-              className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
-            >
-              Sign in
-            </button>
+          <div className="mt-8 border-t border-gray-200 pt-6">
+            <div className="mt-4 text-center">
+              <span className="text-sm text-gray-600 font-medium">Already have an account? </span>
+              <button
+                onClick={onShowLogin}
+                className="text-sm font-bold text-blue-900 hover:text-blue-700 transition-colors uppercase tracking-wide"
+              >
+                Sign in
+              </button>
+            </div>
           </div>
         </div>
       </div>

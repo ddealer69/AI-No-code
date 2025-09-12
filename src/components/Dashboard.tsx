@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, Save, CheckCircle2, Target, Building2, TrendingUp, Filter } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, Building2, TrendingUp, Filter } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
@@ -635,11 +635,14 @@ const Dashboard: React.FC<DashboardProps> = ({
   const canGenerate = filters.sector && filters.domain && filters.process && filters.stage;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Tab Navigation */}
-      <div className="mb-8">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex justify-center space-x-8" aria-label="Tabs">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Section */}
+      <div className="bg-white classic-shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          {/* Tab Navigation */}
+          <div className="mb-8">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex justify-center space-x-8" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('identification')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -679,14 +682,22 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* Header Title - Only show for identification tab */}
       {activeTab === 'identification' && (
-        <>
-          <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">Explore Use Cases</h1>
-            <p className="text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
-            <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
-          </div>
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">Explore Use Cases</h1>
+          <p className="text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
+          <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* Main Content */}
+  <div className="max-w-7xl mx-auto px-6 py-8">
+    {/* Tab Content */}
+    {activeTab === 'identification' && (
+      <>
 
       <div className="bg-white classic-shadow-lg classic-border p-8 mb-12 rounded-lg">
         <div className="grid md:grid-cols-4 gap-6 mb-10">
@@ -798,56 +809,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           >
             <Sparkles className="h-4 w-4" />
             <span>{isGenerating ? 'Generating Strategy...' : 'Generate My Strategy'}</span>
-          </button>
-          
-          {onStartAnalysis && (
-            <button
-              onClick={onStartAnalysis}
-              className="flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-              <span>Current State Analysis</span>
-            </button>
-          )}
-          
-          <button
-            onClick={async () => {
-              // Instead of downloading, we'll save to Supabase
-              try {
-                // Get data from localStorage
-                const savedMatchedData = localStorage.getItem('matchedUseCases');
-                const savedAIData = localStorage.getItem('aiUseCases');
-                const savedFilters = localStorage.getItem('filters');
-                
-                if (savedMatchedData || savedAIData) {
-                  const parsedMatchedData = savedMatchedData ? JSON.parse(savedMatchedData) : [];
-                  const parsedAIData = savedAIData ? JSON.parse(savedAIData) : [];
-                  const parsedFilters = savedFilters ? JSON.parse(savedFilters) : {};
-                  
-                  const fullDataObject = {
-                    filters: parsedFilters,
-                    matchedUseCases: parsedMatchedData,
-                    aiUseCases: parsedAIData,
-                    timestamp: new Date().toISOString()
-                  };
-                  
-                  // Save to Supabase
-                  const recordId = await saveStrategyData(fullDataObject);
-                  alert(`Data successfully saved to database with ID: ${recordId}`);
-                } else {
-                  alert('No saved data found. Generate a strategy first.');
-                }
-              } catch (error) {
-                console.error('Error saving data:', error);
-                alert('Error saving data to database');
-              }
-            }}
-            className="flex items-center justify-center space-x-2 classic-button-secondary"
-          >
-            <Save className="h-4 w-4" />
-            <span>Save Data to Server</span>
           </button>
         </div>
 
@@ -1214,6 +1175,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
     </div>
+  </div>
   );
 };
 
