@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Info, CheckCircle2 } from 'lucide-react';
-import { CurrentStateAnalysis, ScoreBreakdown, SCORING_OPTIONS } from '../types/currentStateAnalysis';
+import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { CurrentStateAnalysis, ScoreBreakdown } from '../types/currentStateAnalysis';
 import ScoreDashboard from './ScoreDashboard';
 import Step1CompanyInfo from './steps/Step1CompanyInfo';
 import Step2ProcessBreakdown from './steps/Step2ProcessBreakdown';
@@ -206,7 +206,7 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Navigation Tabs */}
         <div className="mb-8">
           <nav className="flex justify-center">
@@ -231,13 +231,13 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
         </div>
 
         {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">Current State Analysis</h1>
-          <p className="text-lg text-gray-600 font-medium tracking-wide">Comprehensive assessment of your business process</p>
+        <div className="text-center mb-8 sm:mb-10 px-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-serif leading-tight">Current State Analysis</h1>
+          <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Comprehensive assessment of your business process</p>
           <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
         </div>
 
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content */}
           <div className="flex-1">
             {/* Progress Bar */}
@@ -281,7 +281,7 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
             </div>
 
             {/* Step Content */}
-            <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <div className="bg-white rounded-lg shadow-lg p-5 sm:p-8 mb-8">
               {StepComponent && (
                 <StepComponent
                   data={formData}
@@ -292,21 +292,21 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
             </div>
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row justify-between gap-4 sm:gap-0">
               <button
                 onClick={prevStep}
                 disabled={currentStep === 1}
-                className="flex items-center px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center px-5 sm:px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               >
                 <ChevronLeft className="w-4 h-4 mr-2" />
                 Previous
               </button>
               
               {currentStep === steps.length ? (
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     onClick={handleComplete}
-                    className="flex items-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                    className="flex items-center justify-center px-6 sm:px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm sm:text-base"
                   >
                     Complete Analysis
                     <CheckCircle2 className="w-4 h-4 ml-2" />
@@ -315,7 +315,7 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
                   {onStartFutureAnalysis && (
                     <button
                       onClick={onStartFutureAnalysis}
-                      className="flex items-center px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 font-semibold"
+                      className="flex items-center justify-center px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 font-semibold text-sm sm:text-base"
                     >
                       Start Future Planning
                       <ChevronRight className="w-4 h-4 ml-2" />
@@ -325,7 +325,7 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
               ) : (
                 <button
                   onClick={nextStep}
-                  className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex items-center justify-center px-5 sm:px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base"
                 >
                   Next
                   <ChevronRight className="w-4 h-4 ml-2" />
@@ -333,10 +333,11 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
               )}
             </div>
           </div>
-
           {/* Score Dashboard */}
-          <div className="w-80">
-            <ScoreDashboard scores={scores} />
+          <div className="w-full lg:w-80 flex-shrink-0">
+            <div className="lg:sticky lg:top-24">
+              <ScoreDashboard scores={scores} />
+            </div>
           </div>
         </div>
       </div>

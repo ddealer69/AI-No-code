@@ -65,7 +65,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <img src="/ai4profit-logo.svg" alt="AI4Profit Logo" className="w-48" />
+          <img src="/images/IMG-20250912-WA0002.jpg" alt="AI4Profit Logo" className="w-48" />
         </div>
         <h2 className="mt-8 text-center text-4xl font-bold text-gray-900 font-serif">
           Sign in to Strategy Explorer

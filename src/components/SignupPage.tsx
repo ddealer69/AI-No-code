@@ -78,9 +78,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="w-16 h-16 premium-gradient flex items-center justify-center classic-shadow">
-            <span className="text-white font-bold text-2xl font-serif">AI</span>
-          </div>
+          <img src="/images/IMG-20250912-WA0002.jpg" alt="AI4Profit Logo" className="w-48" />
         </div>
         <h2 className="mt-8 text-center text-4xl font-bold text-gray-900 font-serif">
           Create your account

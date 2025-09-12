@@ -638,11 +638,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     <div className="min-h-screen bg-gray-50">
       {/* Header Section */}
       <div className="bg-white classic-shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           {/* Tab Navigation */}
           <div className="mb-8">
             <div className="border-b border-gray-200">
-              <nav className="-mb-px flex justify-center space-x-8" aria-label="Tabs">
+              <nav className="-mb-px flex flex-wrap justify-center gap-x-8 gap-y-2" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('identification')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -684,9 +684,9 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Header Title - Only show for identification tab */}
       {activeTab === 'identification' && (
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">Explore Use Cases</h1>
-          <p className="text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
+        <div className="text-center mb-8 sm:mb-10 px-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-serif leading-tight">Explore Use Cases</h1>
+          <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
           <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
         </div>
       )}
@@ -694,13 +694,13 @@ const Dashboard: React.FC<DashboardProps> = ({
   </div>
 
   {/* Main Content */}
-  <div className="max-w-7xl mx-auto px-6 py-8">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
     {/* Tab Content */}
     {activeTab === 'identification' && (
       <>
 
-      <div className="bg-white classic-shadow-lg classic-border p-8 mb-12 rounded-lg">
-        <div className="grid md:grid-cols-4 gap-6 mb-10">
+      <div className="bg-white classic-shadow-lg classic-border p-6 sm:p-8 mb-10 sm:mb-12 rounded-lg">
+        <div className="grid md:grid-cols-4 gap-6 mb-8 sm:mb-10">
           {/* Step 1: Sector */}
           <div className="space-y-3">
             <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest">
@@ -793,7 +793,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+  <div className="flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center mt-2">
           <button
             onClick={resetFilters}
             className="flex items-center justify-center space-x-2 classic-button-secondary"
@@ -813,7 +813,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {canGenerate && !isGenerating && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 rounded-r-lg">
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 rounded-r-lg text-sm sm:text-base">
             <p className="text-blue-900 text-sm font-semibold tracking-wide">
               Ready to generate strategy for: <strong>{filters.sector}</strong> → <strong>{filters.domain}</strong> → <strong>{filters.process}</strong> → <strong>{filters.stage}</strong>
             </p>
@@ -821,7 +821,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
 
         {isGenerating && (
-          <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 classic-shadow rounded-r-lg">
+          <div className="mt-6 p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-900 classic-shadow rounded-r-lg">
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-900"></div>
               <p className="text-blue-900 font-bold tracking-wide text-sm">Analyzing your selection and generating AI strategy recommendations...</p>
@@ -833,19 +833,19 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeTab === 'implementation' && (
-        <div className="py-8">
+  <div className="py-6 sm:py-8">
           {generatedStrategy ? (
             <div className="space-y-8">
-              <div className="text-center mb-10">
-                <h2 className="text-4xl font-bold text-gray-900 mb-4 font-serif">AI Strategy Implementation</h2>
-                <p className="text-lg text-gray-600 font-medium tracking-wide">Your personalized AI transformation roadmap</p>
+              <div className="text-center mb-8 sm:mb-10 px-2">
+                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-serif leading-tight">AI Strategy Implementation</h2>
+                <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Your personalized AI transformation roadmap</p>
                 <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
               </div>
 
               {/* Filter Controls */}
-              <div className="bg-white classic-shadow classic-border p-6 mb-8">
-                <div className="flex flex-wrap items-center justify-between gap-6">
-                  <div className="flex items-center space-x-6">
+              <div className="bg-white classic-shadow classic-border p-5 sm:p-6 mb-8">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                     <Filter className="h-5 w-5 text-gray-600" />
                     <span className="text-sm font-bold text-gray-800 uppercase tracking-widest">Filter by Value Metric:</span>
                     <select
@@ -861,7 +861,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <button
                     onClick={() => setSelectedMetric('')}
-                    className="flex items-center space-x-3 classic-button-secondary text-xs"
+                    className="flex items-center space-x-2 sm:space-x-3 classic-button-secondary text-xs"
                   >
                     <RotateCcw className="h-4 w-4" />
                     <span>Clear Filter</span>
@@ -874,13 +874,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {/* Matched Use Cases Section */}
                 {(() => {
                   // Filter use cases by selected metric
-                  const filteredUseCases = Object.entries(generatedStrategy.matchedUseCases).filter(([key, useCase]: [string, any]) => {
+                  const filteredUseCases = Object.entries(generatedStrategy.matchedUseCases).filter(([, useCase]: [string, any]) => {
                     if (!selectedMetric) return true; // Show all if no filter selected
                     return useCase.primaryMetric === selectedMetric || useCase.secondaryMetric === selectedMetric;
                   });
 
                   return filteredUseCases.length > 0 && (
-                    <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                    <div className="bg-white classic-shadow-lg classic-border rounded-lg p-6 sm:p-8">
                       <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                         <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
                         Matched Business Use Cases
@@ -902,7 +902,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 <p className="text-gray-700 mb-4">{useCase.jobRole}</p>
 
                                 {/* Primary and Secondary Metrics */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
                                   <div>
                                     <h4 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Primary Metric</h4>
                                     <span className="px-3 py-1 bg-green-50 text-green-800 text-xs font-bold uppercase tracking-wide border border-green-200 rounded">
@@ -948,7 +948,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* AI Use Cases Section */}
                 {Object.keys(generatedStrategy.aiUseCases).length > 0 && (
-                  <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                    <div className="bg-white classic-shadow-lg classic-border rounded-lg p-6 sm:p-8">
                     <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                       <Sparkles className="w-6 h-6 mr-3 text-blue-600" />
                       AI Implementation Details
@@ -1015,7 +1015,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                           key={useCase.id}
                           className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
                         >
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b mb-4">
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-4 border-b mb-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
                                 <Building2 className="h-6 w-6 text-blue-600" />
@@ -1027,11 +1027,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                             </div>
                           </div>
 
-                          <div className="space-y-5">
+                            <div className="space-y-5">
                             <div>
                               <h3 className="font-semibold text-gray-900 mb-2">Business Case Details</h3>
-                              <div className="bg-gray-50 rounded-lg p-5">
-                                <div className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">
+                              <div className="bg-gray-50 rounded-lg p-4 sm:p-5 overflow-x-auto">
+                                <div className="text-gray-700 whitespace-pre-wrap leading-relaxed text-xs sm:text-sm min-w-[260px]">
                                   {useCase.BP ? useCase.BP.split('\n').map((line: string, idx: number) => (
                                     <p key={idx} className="mb-2">{line}</p>
                                   )) : 'No details available'}
@@ -1042,9 +1042,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                             {useCase['Real Project 1'] && (
                               <div>
                                 <h3 className="font-semibold text-gray-900 mb-2">Project Implementation 1</h3>
-                                <div className="bg-blue-50 rounded-lg p-5">
+                                <div className="bg-blue-50 rounded-lg p-4 sm:p-5">
                                   <div 
-                                    className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
+                                    className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
                                     dangerouslySetInnerHTML={{ 
                                       __html: formatTextWithBoldHeadings(useCase['Real Project 1']) 
                                     }}
@@ -1056,9 +1056,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                             {useCase['Real Project 2'] && (
                               <div>
                                 <h3 className="font-semibold text-gray-900 mb-2">Project Implementation 2</h3>
-                                <div className="bg-green-50 rounded-lg p-5">
+                                <div className="bg-green-50 rounded-lg p-4 sm:p-5">
                                   <div 
-                                    className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
+                                    className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
                                     dangerouslySetInnerHTML={{ 
                                       __html: formatTextWithBoldHeadings(useCase['Real Project 2']) 
                                     }}
@@ -1068,7 +1068,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             )}
 
                             {/* Additional Information Section */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                               {useCase.Sector && (
                                 <div className="bg-indigo-50 p-4 rounded-lg">
                                   <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
@@ -1091,7 +1091,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             </div>
                             
                             {/* Display any other fields from the real use case */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 mt-3">
                               {Object.entries(useCase).map(([key, value]: [string, any]) => {
                                 // Skip fields we've already rendered or empty values
                                 if (['BP', 'Company', 'Sector', 'Industry', 'id', 'Real Project 1', 'Real Project 2'].includes(key) || !value) {
@@ -1123,7 +1123,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex justify-center space-x-4 mt-8">
+                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8 px-2">
                   <button
                     onClick={() => {
                       setActiveTab('identification');
@@ -1143,11 +1143,11 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
           ) : (
-            <div className="text-center py-20">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Implementation Phase</h2>
-              <p className="text-gray-600 mb-8">Generate an AI strategy from the Identification tab to see your implementation roadmap.</p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 max-w-2xl mx-auto">
-                <p className="text-blue-800">Once you generate a strategy, this section will contain your personalized implementation guides, AI use cases, and execution roadmap.</p>
+            <div className="text-center py-16 sm:py-20 px-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Implementation Phase</h2>
+              <p className="text-gray-600 mb-8 text-sm sm:text-base">Generate an AI strategy from the Identification tab to see your implementation roadmap.</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 sm:p-8 max-w-2xl mx-auto">
+                <p className="text-blue-800 text-sm sm:text-base">Once you generate a strategy, this section will contain your personalized implementation guides, AI use cases, and execution roadmap.</p>
               </div>
               <button
                 onClick={() => setActiveTab('identification')}
@@ -1161,9 +1161,9 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeTab === 'financials' && (
-        <div className="text-center py-20">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Financial Analysis</h2>
-          <p className="text-gray-600 mb-8">Click the button below to start your comprehensive financial analysis.</p>
+        <div className="text-center py-16 sm:py-20 px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Financial Analysis</h2>
+          <p className="text-gray-600 mb-8 text-sm sm:text-base">Click the button below to start your comprehensive financial analysis.</p>
           {onStartAnalysis && (
             <button
               onClick={onStartAnalysis}
