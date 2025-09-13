@@ -68,11 +68,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
           <img src="/images/IMG-20250912-WA0002.jpg" alt="AI4Profit Logo" className="w-48" />
         </div>
         <h2 className="mt-8 text-center text-4xl font-bold text-gray-900 font-serif">
-          Sign in to Strategy Explorer
+          Sign in to AI Strategy Builder
         </h2>
-        <p className="mt-3 text-center text-sm text-gray-600 uppercase tracking-widest font-medium">
+        {/* <p className="mt-3 text-center text-sm text-gray-600 uppercase tracking-widest font-medium">
           Enterprise Intelligence Platform
-        </p>
+        </p> */}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">

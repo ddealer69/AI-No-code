@@ -26,8 +26,8 @@ const Header: React.FC = () => {
               />
             </div>
             <div className="leading-tight truncate">
-              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">Strategy Explorer</h1>
-              <p className="text-[10px] sm:text-xs text-blue-100 uppercase tracking-widest font-medium">Enterprise Intelligence Platform</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">AI Strategy Builder</h1>
+              {/* <p className="text-[10px] sm:text-xs text-blue-100 uppercase tracking-widest font-medium">Enterprise Intelligence Platform</p> */}
             </div>
           </div>
 

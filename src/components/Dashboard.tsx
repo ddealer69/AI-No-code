@@ -355,7 +355,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       console.log('AI Use Case descriptions to search for:', aiUseCaseDescriptions);
       
       // Fetch matching AI use cases from the appropriate table
-      const aiTableName = filters.sector === 'Service' ? 'Service_Ai_Cases' : 'Manufacturing_Ai_Cases';
+      const aiTableName = filters.sector === 'Service' ? 'Service_Ai_Cases_Updated' : 'Manufacturing_Ai_Cases_Updated';
       
       // Create an array of promises for each AI use case search
       const aiUseCasePromises = aiUseCaseDescriptions.map(async (description: string) => {
@@ -531,8 +531,6 @@ const Dashboard: React.FC<DashboardProps> = ({
               } else if (Array.isArray(aiCase['Recommended Tools/Platforms'])) {
                 tools = aiCase['Recommended Tools/Platforms'];
               }
-            } else if (aiCase.tools && Array.isArray(aiCase.tools)) {
-              tools = aiCase.tools;
             }
             
             // Determine if custom development is required
@@ -543,7 +541,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               customDevField === 'YES' ||
               customDevField === true;
             
-            // Use existing useCase field or the Use_Case field from database (note the underscore)
+            // Use existing useCase field or the Use_Case field from database
             const useCaseText = aiCase.useCase || aiCase['Use_Case'] || aiCase['Use Case'] || '';
             
             if (!useCaseText) {
@@ -561,6 +559,13 @@ const Dashboard: React.FC<DashboardProps> = ({
               tools: tools || [],
               customDev: customDev || false,
               implementationNotes: aiCase['Notes on Implementation'] || aiCase.implementationNotes || '',
+              
+              // Use the correct column names from your database
+              dataQuantitative: aiCase['Data Needs (Quantitative)'] || '',
+              dataQualitative: aiCase['Data Needs (Qualitative)'] || '',
+              exampleSources: aiCase['Example Sources'] || '',
+              dataAvailabilityNotes: aiCase['Data Availability Notes'] || '',
+              
               // Add additional fields if available
               expectedROI: aiCase['Expected ROI'] || aiCase.expectedROI || 'Medium'
             };
@@ -574,6 +579,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               tools: ["Various tools"],
               customDev: false,
               implementationNotes: "Details not available",
+              dataAvailability: "Unknown",
+              dataAvailabilityNotes: "",
               expectedROI: "Medium"
             };
           }
@@ -645,7 +652,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <nav className="-mb-px flex flex-wrap justify-center gap-x-8 gap-y-2" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('identification')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] ${
                 activeTab === 'identification'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -655,7 +662,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('implementation')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] ${
                 activeTab === 'implementation'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -670,7 +677,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   onStartAnalysis();
                 }
               }}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] ${
                 activeTab === 'financials'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -686,7 +693,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       {activeTab === 'identification' && (
         <div className="text-center mb-8 sm:mb-10 px-2">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-serif leading-tight">Explore Use Cases</h1>
-          <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p>
+          {/* a slogun for identifications tab */}
+          {/* <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Filter step by step to find the details you need</p> */}
           <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
         </div>
       )}
@@ -772,7 +780,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           {/* Step 4: Stage */}
           <div className="space-y-3">
             <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest">
-              Step 4: Select a Stage
+              Step 4: Select a Job Role
             </label>
             <div className="relative">
               <select
@@ -833,7 +841,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeTab === 'implementation' && (
-  <div className="py-6 sm:py-8">
+        <div>
           {generatedStrategy ? (
             <div className="space-y-8">
               <div className="text-center mb-8 sm:mb-10 px-2">
@@ -956,8 +964,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="grid gap-6">
                       {Object.entries(generatedStrategy.aiUseCases).map(([key, aiCase]: [string, any]) => (
                         <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <h4 className="font-semibold text-gray-900 mb-3">{aiCase.useCase}</h4>
+                          <h4 className="font-semibold text-gray-900 mb-4 text-lg">{aiCase.useCase}</h4>
                           
+                          {/* First Row - AI System Type and Custom Development */}
                           <div className="grid md:grid-cols-2 gap-4 mb-4">
                             <div>
                               <span className="text-sm font-medium text-gray-500">AI System Type:</span>
@@ -966,20 +975,62 @@ const Dashboard: React.FC<DashboardProps> = ({
                               </span>
                             </div>
                             <div>
-                              <span className="text-sm font-medium text-gray-500">Custom Development:</span>
+                              <span className="text-sm font-medium text-gray-500">Custom Development Needed:</span>
                               <span className={`ml-2 px-2 py-1 rounded text-sm ${
                                 aiCase.customDev 
                                   ? 'bg-orange-100 text-orange-800' 
                                   : 'bg-green-100 text-green-800'
                               }`}>
-                                {aiCase.customDev ? 'Required' : 'Not Required'}
+                                {aiCase.customDev ? 'Yes' : 'No'}
                               </span>
                             </div>
                           </div>
 
+                          {/* Data Requirements Section */}
+                          <div className="grid md:grid-cols-2 gap-4 mb-4">
+                            {aiCase.dataQuantitative && (
+                              <div>
+                                <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Quantitative):</span>
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                  <p className="text-blue-800 text-sm">{aiCase.dataQuantitative}</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {aiCase.dataQualitative && (
+                              <div>
+                                <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Qualitative):</span>
+                                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                                  <p className="text-indigo-800 text-sm">{aiCase.dataQualitative}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Example Sources */}
+                          {aiCase.exampleSources && (
+                            <div className="mb-4">
+                              <span className="text-sm font-medium text-gray-500 block mb-2">Example Sources:</span>
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <p className="text-green-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.exampleSources}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Data Availability Notes */}
+                          {aiCase.dataAvailabilityNotes && (
+                            <div className="mb-4">
+                              <span className="text-sm font-medium text-gray-500 block mb-2">Data Availability Notes:</span>
+                              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                <p className="text-purple-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.dataAvailabilityNotes}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Recommended Tools */}
                           {aiCase.tools && aiCase.tools.length > 0 && (
                             <div className="mb-4">
-                              <span className="text-sm font-medium text-gray-500 block mb-2">Recommended Tools:</span>
+                              <span className="text-sm font-medium text-gray-500 block mb-2">Recommended Tools/Platforms:</span>
                               <div className="flex flex-wrap gap-2">
                                 {aiCase.tools.map((tool: string, index: number) => (
                                   <span key={index} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
@@ -990,10 +1041,27 @@ const Dashboard: React.FC<DashboardProps> = ({
                             </div>
                           )}
 
+                          {/* Implementation Notes */}
                           {aiCase.implementationNotes && (
-                            <div>
-                              <span className="text-sm font-medium text-gray-500 block mb-2">Implementation Notes:</span>
-                              <p className="text-gray-700 text-sm">{aiCase.implementationNotes}</p>
+                            <div className="mb-4">
+                              <span className="text-sm font-medium text-gray-500 block mb-2">Notes on Implementation:</span>
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                <p className="text-yellow-800 text-sm leading-relaxed whitespace-pre-wrap">
+                                  {aiCase.implementationNotes}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Expected ROI */}
+                          {aiCase.expectedROI && (
+                            <div className="pt-3 border-t border-gray-200">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-500">Expected ROI:</span>
+                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                  {aiCase.expectedROI}
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1143,15 +1211,15 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
           ) : (
-            <div className="text-center py-16 sm:py-20 px-4">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Implementation Phase</h2>
-              <p className="text-gray-600 mb-8 text-sm sm:text-base">Generate an AI strategy from the Identification tab to see your implementation roadmap.</p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 sm:p-8 max-w-2xl mx-auto">
+            <div className="text-center py-4 sm:py-6 px-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Implementation Phase</h2>
+              <p className="text-gray-600 mb-4 text-sm sm:text-base">Generate an AI strategy from the Identification tab to see your implementation roadmap.</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 max-w-2xl mx-auto">
                 <p className="text-blue-800 text-sm sm:text-base">Once you generate a strategy, this section will contain your personalized implementation guides, AI use cases, and execution roadmap.</p>
               </div>
               <button
                 onClick={() => setActiveTab('identification')}
-                className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="mt-3 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Go to Identification
               </button>
