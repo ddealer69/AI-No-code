@@ -789,7 +789,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 disabled={!filters.process}
                 className="w-full classic-input appearance-none pr-10 disabled:bg-gray-100 disabled:text-gray-500 font-medium text-sm"
               >
-                <option value="">Choose stage...</option>
+                <option value="">Choose job role...</option>
                 {stages.map((stage: string) => (
                   <option key={stage} value={stage}>
                     {stage}
