@@ -70,6 +70,14 @@ const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
     });
   };
 
+  // Helper to clean up project text (remove match score lines etc.)
+  const sanitizeProjectText = (text: string) => {
+    if (!text) return text;
+    // Remove any lines like "Match Score: 5" or with decimals
+    let cleaned = text.replace(/(^|\n)\s*Match\s*Score\s*:\s*\d+(?:\.\d+)?\s*(?=\n|$)/gi, '');
+    return cleaned.trim();
+  };
+
   // Helper function to format text with bold headings
   const formatTextWithBoldHeadings = (text: string) => {
     if (!text) return text;
@@ -78,11 +86,18 @@ const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
     const patterns = [
       'How AI Was Applied:',
       'Continuous Learning:',
-      'Outcome:'
+      'Outcome:',
+      'Scenario:',
+      'Challenge:',
+      'AI Approach:',
+      'Discovery:',
+      'Action Taken:',
+      'Results:',
+      'Implementation Steps:'
     ];
     
     // Split text into parts and reconstruct with bold formatting
-    let formattedText = text;
+    let formattedText = sanitizeProjectText(text);
     
     patterns.forEach(pattern => {
       const regex = new RegExp(`(${pattern})`, 'gi');
@@ -240,16 +255,7 @@ Details: ${useCase.BP || 'No details available'}
                     </div>
                   )}
 
-                  {/* Additional fields if they exist */}
-                  {useCase.Company && (
-                    <div className="flex items-start space-x-3">
-                      <Building2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-1">Company</h4>
-                        <p className="text-gray-600">{useCase.Company}</p>
-                      </div>
-                    </div>
-                  )}
+                  {/* Additional fields if they exist (Company omitted to avoid duplication with header) */}
 
                   {useCase.Sector && (
                     <div className="flex items-start space-x-3">
@@ -263,7 +269,23 @@ Details: ${useCase.BP || 'No details available'}
 
                   {/* Display any other fields that might be in the data */}
                   {Object.entries(useCase).map(([key, value]) => {
-                    if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && key !== 'Real Project 1' && key !== 'Real Project 2' && value) {
+                    // Skip fields already rendered above or known synonyms from CSV mapping to avoid duplication
+                    const SKIP_KEYS = new Set([
+                      'BP',
+                      'details',
+                      'Company',
+                      'company',
+                      'Sector',
+                      'id',
+                      'Real Project 1',
+                      'Real Project 2',
+                      'Real Case 1',
+                      'Real Case 2',
+                      'realCase1',
+                      'realCase2',
+                      'matchScore'
+                    ]);
+                    if (!SKIP_KEYS.has(key) && value) {
                       return (
                         <div key={key} className="flex items-start space-x-3">
                           <div className="h-5 w-5 bg-gray-300 rounded-full mt-0.5 flex-shrink-0"></div>

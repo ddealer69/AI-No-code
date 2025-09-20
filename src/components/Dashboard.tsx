@@ -274,13 +274,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         realCase1: match.realCase1,
         realCase2: match.realCase2,
         matchScore: match.matchScore,
-        // Map CSV fields to expected display fields - avoid duplication
+        // Map CSV fields to expected display fields - no duplicate mappings
         'Real Project 1': match.realCase1, // First real case example
         'Real Project 2': match.realCase2, // Second real case example
-        'Real Case 1': match.realCase1,
-        'Real Case 2': match.realCase2,
-        company: 'CSV Example', // Generic company name since CSV doesn't specify
-        Company: 'CSV Example'
+        company: 'Real Case Example', // Generic company name since CSV doesn't specify
+        Company: 'Real Case Example'
       }));
 
       console.log('Formatted matches:', formattedMatches.length);
@@ -1114,22 +1112,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                       )}
 
                       {/* Real Use Cases Section */}
-                      {/* Debug: Show real use cases data info */}
-                      <div className="bg-yellow-50 border border-yellow-200 p-4 mb-4">
-                        <p className="text-sm text-gray-700">
-                          Debug: Real use cases data loaded: {realUseCasesData.length} items
-                          {realUseCasesData.length > 0 && (
-                            <span> | First item: {JSON.stringify(realUseCasesData[0], null, 2).substring(0, 100)}...</span>
-                          )}
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          Filtered real use cases: {filteredRealUseCases.length} items
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          Loading state: {loadingRealUseCases ? 'Loading...' : 'Not loading'}
-                        </p>
-                      </div>
-
                       {filteredRealUseCases.length > 0 && (
                         <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
                           <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
@@ -1228,7 +1210,10 @@ const Dashboard: React.FC<DashboardProps> = ({
 
                                     {/* Display any other fields that might be in the data */}
                                     {Object.entries(useCase).map(([key, value]) => {
-                                      if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && key !== 'Real Project 1' && key !== 'Real Project 2' && value) {
+                                      if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && 
+                                          key !== 'Real Project 1' && key !== 'Real Project 2' && 
+                                          key !== 'details' && key !== 'company' && key !== 'realCase1' && 
+                                          key !== 'realCase2' && key !== 'matchScore' && value) {
                                         return (
                                           <div key={key} className="flex items-start space-x-3">
                                             <div className="h-5 w-5 bg-gray-300 rounded-full mt-0.5 flex-shrink-0"></div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, RotateCcw, Filter, ArrowLeft } from 'lucide-react';
 import { UseCase } from '../types';
-import { searchRealCasesInCSV, loadCSVContent, RealCaseMatch } from '../utils/csvRealCasesService';
+import { searchRealCasesInCSV, loadCSVContent } from '../utils/csvRealCasesService';
 
 interface MatchedUseCasesPageProps {
   useCases: { [key: string]: UseCase };
@@ -48,19 +48,15 @@ const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
       // Convert matches to expected format
       const formattedMatches = matches.map((match) => ({
         id: match.id,
-        // Use the clean details from CSV service (already formatted)
-        BP: match.details, // This now contains the clean business process summary
-        details: match.details, // Same clean summary, no duplication with real cases
-        realCase1: match.realCase1,
-        realCase2: match.realCase2,
-        matchScore: match.matchScore,
-        // Map CSV fields to expected display fields - avoid duplication
+        // Provide a single canonical BP field for the main details
+        BP: match.details,
+        // Provide canonical Real Project fields for formatted sections
         'Real Project 1': match.realCase1,
         'Real Project 2': match.realCase2,
-        'Real Case 1': match.realCase1,
-        'Real Case 2': match.realCase2,
-        company: 'CSV Example',
-        Company: 'CSV Example'
+        // Keep a single company field
+        Company: 'CSV Example',
+        // Keep match score as meta (optional display in future)
+        matchScore: match.matchScore
       }));
 
       setRealUseCasesData(formattedMatches);
