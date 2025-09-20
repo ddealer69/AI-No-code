@@ -24,6 +24,7 @@ function AppContent() {
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>([]);
   const [analysisData, setAnalysisData] = useState<{ analysis: CurrentStateAnalysis; scores: ScoreBreakdown } | null>(null);
   const [futureAnalysisData, setFutureAnalysisData] = useState<{ analysis: FutureStateAnalysis; scores: FutureScoreBreakdown } | null>(null);
+  const [selectedSector, setSelectedSector] = useState<string>('service'); // Add sector state
 
   if (!user) {
     return currentView === 'signup' ? (
@@ -75,6 +76,7 @@ function AppContent() {
         return <Dashboard 
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
+          onSectorChange={setSelectedSector}
           initialTab={activeTab}
           realUseCasesData={realUseCasesData}
         />;
@@ -109,6 +111,7 @@ function AppContent() {
         return strategyData ? (
           <MatchedUseCasesPage
             useCases={strategyData.matchedUseCases}
+            sector={selectedSector}
             onViewAIUseCases={(passedRealUseCasesData) => {
               console.log("Transitioning to AI Use Cases view");
               if (passedRealUseCasesData) {

@@ -4,10 +4,12 @@ import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
 import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
+import { searchRealCasesInCSV, loadCSVContent, RealCaseMatch } from '../utils/csvRealCasesService';
 
 interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
   onStartAnalysis: () => void;
+  onSectorChange?: (sector: string) => void;
   initialTab?: 'identification' | 'implementation' | 'financials';
   realUseCasesData?: any[];
 }
@@ -15,6 +17,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ 
   onGenerateStrategy, 
   onStartAnalysis, 
+  onSectorChange,
   initialTab = 'identification',
   realUseCasesData: propRealUseCasesData = []
 }) => {
@@ -188,6 +191,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleFilterChange = (type: keyof FilterData, value: string) => {
     if (type === 'sector') {
       setFilters({ sector: value, domain: '', process: '', stage: '' });
+      // Notify parent component of sector change
+      if (onSectorChange) {
+        onSectorChange(value);
+      }
     } else if (type === 'domain') {
       setFilters({ ...filters, domain: value, process: '', stage: '' });
     } else if (type === 'process') {
@@ -223,56 +230,64 @@ const Dashboard: React.FC<DashboardProps> = ({
     return formattedText;
   };
 
-  // Search BP column for real use cases matching the given use case
+  // Search CSV file for real use cases matching the given use case
   const searchRealUseCases = async (useCase: any) => {
-    if (!useCase || !useCase.businessProcess) return;
+    if (!useCase || !useCase.businessProcess) {
+      console.log('No use case provided or missing businessProcess');
+      return;
+    }
+    
+    console.log('Starting real use cases search with:', useCase);
     
     setLoadingRealUseCases(true);
     
     try {
-      // Search in Service_Real_Cases first
-      const { data: serviceData, error: serviceError } = await supabase
-        .from('Service_Real_Cases')
-        .select('*')
-        .ilike('BP', `%${useCase.businessProcess}%`)
-        .ilike('BP', `%${useCase.functionalAreas?.[0] || ''}%`)
-        .ilike('BP', `%${useCase.aiUseCase || ''}%`);
+      console.log('Searching real cases for:', {
+        businessProcess: useCase.businessProcess,
+        functionalArea: useCase.functionalAreas?.[0],
+        aiUseCase: useCase.aiUseCase,
+        sector: filters.sector
+      });
 
-      if (serviceError) {
-        console.error('Service BP search error:', serviceError);
-      } else {
-        console.log('Service BP search result:', serviceData);
-        if (serviceData && serviceData.length > 0) {
-          setRealUseCasesData(serviceData);
-          setLoadingRealUseCases(false);
-          return;
-        }
-      }
+      // Load CSV content based on sector
+      const csvContent = await loadCSVContent(filters.sector || 'service');
+      
+      console.log('CSV content loaded, rows:', csvContent.length);
+      
+      // Search using the three criteria in order
+      const matches = searchRealCasesInCSV(
+        csvContent,
+        useCase.businessProcess,
+        useCase.functionalAreas?.[0] || '',
+        useCase.aiUseCase || ''
+      );
 
-      // If no data found in Service_Real_Cases, search in Manufacturing_Real_Cases
-      const { data: manufacturingData, error: manufacturingError } = await supabase
-        .from('Manufacturing_Real_Cases')
-        .select('*')
-        .ilike('BP', `%${useCase.businessProcess}%`)
-        .ilike('BP', `%${useCase.functionalAreas?.[0] || ''}%`)
-        .ilike('BP', `%${useCase.aiUseCase || ''}%`);
+      console.log('CSV search results:', matches.length, 'matches found');
+      console.log('First match:', matches[0]);
 
-      if (manufacturingError) {
-        console.error('Manufacturing BP search error:', manufacturingError);
-      } else {
-        console.log('Manufacturing BP search result:', manufacturingData);
-        if (manufacturingData && manufacturingData.length > 0) {
-          setRealUseCasesData(manufacturingData);
-          setLoadingRealUseCases(false);
-          return;
-        }
-      }
+      // Convert matches to the expected format
+      const formattedMatches = matches.map((match) => ({
+        id: match.id,
+        // Use the clean details from CSV service (already formatted)
+        BP: match.details, // This now contains the clean business process summary
+        details: match.details, // Same clean summary, no duplication with real cases
+        realCase1: match.realCase1,
+        realCase2: match.realCase2,
+        matchScore: match.matchScore,
+        // Map CSV fields to expected display fields - avoid duplication
+        'Real Project 1': match.realCase1, // First real case example
+        'Real Project 2': match.realCase2, // Second real case example
+        'Real Case 1': match.realCase1,
+        'Real Case 2': match.realCase2,
+        company: 'CSV Example', // Generic company name since CSV doesn't specify
+        Company: 'CSV Example'
+      }));
 
-      // If no data found in either table, set empty array
-      setRealUseCasesData([]);
+      console.log('Formatted matches:', formattedMatches.length);
+      setRealUseCasesData(formattedMatches);
       
     } catch (error) {
-      console.error('Error searching BP:', error);
+      console.error('Error searching CSV for real cases:', error);
       setRealUseCasesData([]);
     } finally {
       setLoadingRealUseCases(false);
@@ -1099,6 +1114,22 @@ const Dashboard: React.FC<DashboardProps> = ({
                       )}
 
                       {/* Real Use Cases Section */}
+                      {/* Debug: Show real use cases data info */}
+                      <div className="bg-yellow-50 border border-yellow-200 p-4 mb-4">
+                        <p className="text-sm text-gray-700">
+                          Debug: Real use cases data loaded: {realUseCasesData.length} items
+                          {realUseCasesData.length > 0 && (
+                            <span> | First item: {JSON.stringify(realUseCasesData[0], null, 2).substring(0, 100)}...</span>
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          Filtered real use cases: {filteredRealUseCases.length} items
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          Loading state: {loadingRealUseCases ? 'Loading...' : 'Not loading'}
+                        </p>
+                      </div>
+
                       {filteredRealUseCases.length > 0 && (
                         <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
                           <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">

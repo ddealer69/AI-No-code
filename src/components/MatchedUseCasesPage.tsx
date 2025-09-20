@@ -1,96 +1,80 @@
 import React, { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { ArrowRight, RotateCcw, Filter, ArrowLeft } from 'lucide-react';
 import { UseCase } from '../types';
+import { searchRealCasesInCSV, loadCSVContent, RealCaseMatch } from '../utils/csvRealCasesService';
 
 interface MatchedUseCasesPageProps {
   useCases: { [key: string]: UseCase };
   onViewAIUseCases: (realUseCasesData?: any[]) => void;
   onViewPrevious: () => void;
   onRestart: () => void;
+  sector?: string; // Add sector prop
 }
 
 const MatchedUseCasesPage: React.FC<MatchedUseCasesPageProps> = ({
   useCases,
   onViewAIUseCases,
   onViewPrevious,
-  onRestart
+  onRestart,
+  sector = 'service' // Default to service if not provided
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<string>('');
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>([]);
 
-  const supabase = createClient(
-    'https://kabdokfowpwrdgywjtfv.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYmRva2Zvd3B3cmRneXdqdGZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzM3NTUsImV4cCI6MjA3MTgwOTc1NX0.8Nt4Lc1TvnotyTXKUHAhq3W14Imx-QfbMpIw1f15pG4'
-  );
-
   const useCasesList = Object.values(useCases);
 
-  // Search BP column for each use case and print output
-  const searchBP = async (useCase: UseCase) => {
-    // Templates for Service_Real_Cases
-    const bpTemplate = `Business Process - ${useCase.businessProcess}`;
-    const faTemplate = `Functional area - ${useCase.functionalAreas[0]}`;
-    const ucTemplate = `Use Case - ${useCase.aiUseCase}`;
-    const serviceSearchString = `${bpTemplate}*${faTemplate}*${ucTemplate}`;
-    
-    // Templates for Manufacturing_Real_Cases (without "- " in Use Case)
-    const manufacturingBpTemplate = `Business Process - ${useCase.businessProcess}`;
-    const manufacturingFaTemplate = `Functional area - ${useCase.functionalAreas[0]}`;
-    const manufacturingUcTemplate = `Use Case ${useCase.aiUseCase}`;
-    const manufacturingSearchString = `${manufacturingBpTemplate}*${manufacturingFaTemplate}*${manufacturingUcTemplate}`;
-    
+  // Search CSV file for real use cases matching the given use case
+  const searchCSVForRealCases = async (useCase: UseCase) => {
     try {
-      // Search in Service_Real_Cases first
-      const { data: serviceData, error: serviceError } = await supabase
-        .from('Service_Real_Cases')
-        .select('*')
-        .ilike('BP', `%${useCase.businessProcess}%`)
-        .ilike('BP', `%${useCase.functionalAreas[0]}%`)
-        .ilike('BP', `%${useCase.aiUseCase}%`);
+      console.log('Searching CSV for real cases:', {
+        businessProcess: useCase.businessProcess,
+        functionalArea: useCase.functionalAreas[0],
+        aiUseCase: useCase.aiUseCase
+      });
 
-      if (serviceError) {
-        console.error('Service BP search error:', serviceError);
-      } else {
-        console.log('Service BP search result for:', serviceSearchString, serviceData);
-        if (serviceData && serviceData.length > 0) {
-          setRealUseCasesData(serviceData);
-          return;
-        }
-      }
+      // Load CSV content based on sector
+      const csvContent = await loadCSVContent(sector);
+      
+      // Search using the three criteria in order
+      const matches = searchRealCasesInCSV(
+        csvContent,
+        useCase.businessProcess,
+        useCase.functionalAreas[0] || '',
+        useCase.aiUseCase || ''
+      );
 
-      // If no data found in Service_Real_Cases, search in Manufacturing_Real_Cases
-      const { data: manufacturingData, error: manufacturingError } = await supabase
-        .from('Manufacturing_Real_Cases')
-        .select('*')
-        .ilike('BP', `%${useCase.businessProcess}%`)
-        .ilike('BP', `%${useCase.functionalAreas[0]}%`)
-        .ilike('BP', `%${useCase.aiUseCase}%`);
+      console.log('CSV search results:', matches);
 
-      if (manufacturingError) {
-        console.error('Manufacturing BP search error:', manufacturingError);
-      } else {
-        console.log('Manufacturing BP search result for:', manufacturingSearchString, manufacturingData);
-        if (manufacturingData && manufacturingData.length > 0) {
-          setRealUseCasesData(manufacturingData);
-          return;
-        }
-      }
+      // Convert matches to expected format
+      const formattedMatches = matches.map((match) => ({
+        id: match.id,
+        // Use the clean details from CSV service (already formatted)
+        BP: match.details, // This now contains the clean business process summary
+        details: match.details, // Same clean summary, no duplication with real cases
+        realCase1: match.realCase1,
+        realCase2: match.realCase2,
+        matchScore: match.matchScore,
+        // Map CSV fields to expected display fields - avoid duplication
+        'Real Project 1': match.realCase1,
+        'Real Project 2': match.realCase2,
+        'Real Case 1': match.realCase1,
+        'Real Case 2': match.realCase2,
+        company: 'CSV Example',
+        Company: 'CSV Example'
+      }));
 
-      // If no data found in either table, set empty array
-      console.log('No data found in either table for Service:', serviceSearchString, 'Manufacturing:', manufacturingSearchString);
-      setRealUseCasesData([]);
+      setRealUseCasesData(formattedMatches);
       
     } catch (error) {
-      console.error('Error searching BP:', error);
+      console.error('Error searching CSV for real cases:', error);
       setRealUseCasesData([]);
     }
   };
 
-  // Example: search for first filtered use case on mount
+  // Search for real cases when component mounts or use cases change
   React.useEffect(() => {
     if (useCasesList.length > 0) {
-      searchBP(useCasesList[0]);
+      searchCSVForRealCases(useCasesList[0]);
     }
   }, [useCasesList]);
   const filteredUseCases = selectedMetric 
