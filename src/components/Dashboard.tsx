@@ -505,7 +505,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             aiUseCase: useCase['AI Use Cases'] || '',
             impact: useCase['Impact'] || '',
             // Set expectedROI based on Impact if available
-            expectedROI: useCase['Impact'] ? 'High' : 'Medium',
+            // expectedROI: useCase['Impact'] ? 'High' : 'Medium',
+            expectedROI: useCase['Expected ROI'],
           };
           return acc;
         }, {} as { [key: string]: any }),
@@ -567,7 +568,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               dataAvailabilityNotes: aiCase['Data Availability Notes'] || '',
               
               // Add additional fields if available
-              expectedROI: aiCase['Expected ROI'] || aiCase.expectedROI || 'Medium'
+              // expectedROI: aiCase['Expected ROI'] || aiCase.expectedROI || 'Medium'
             };
           } catch (error) {
             console.error(`Error processing AI case at index ${index}:`, error);
@@ -879,7 +880,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
               {/* Strategy Content */}
               <div className="grid gap-8">
-                {/* Matched Use Cases Section */}
                 {(() => {
                   // Filter use cases by selected metric
                   const filteredUseCases = Object.entries(generatedStrategy.matchedUseCases).filter(([, useCase]: [string, any]) => {
@@ -887,300 +887,347 @@ const Dashboard: React.FC<DashboardProps> = ({
                     return useCase.primaryMetric === selectedMetric || useCase.secondaryMetric === selectedMetric;
                   });
 
-                  return filteredUseCases.length > 0 && (
-                    <div className="bg-white classic-shadow-lg classic-border rounded-lg p-6 sm:p-8">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                        <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
-                        Matched Business Use Cases
-                        {selectedMetric && (
-                          <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                            Filtered by: {selectedMetric}
-                          </span>
-                        )}
-                      </h3>
-                      <div className="grid gap-6">
-                        {filteredUseCases.map(([key, useCase]: [string, any]) => (
-                          <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                            <div className="grid md:grid-cols-2 gap-4">
-                              <div>
-                                <h4 className="font-semibold text-gray-900 mb-2">Business Process</h4>
-                                <p className="text-gray-700 mb-4">{useCase.businessProcess}</p>
-                                
-                                <h4 className="font-semibold text-gray-900 mb-2">Job Role</h4>
-                                <p className="text-gray-700 mb-4">{useCase.jobRole}</p>
+                  // Get the AI use case names from filtered matched use cases
+                  const filteredAIUseCaseNames = filteredUseCases.map(([, useCase]: [string, any]) => useCase.aiUseCase);
+                  
+                  // Filter AI use cases based on matched use cases
+                  const filteredAIUseCases = Object.entries(generatedStrategy.aiUseCases).filter(([, aiCase]: [string, any]) => {
+                    if (!selectedMetric) return true; // Show all if no filter selected
+                    return filteredAIUseCaseNames.includes(aiCase.useCase);
+                  });
 
-                                {/* Primary and Secondary Metrics */}
-                                <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
+                  // Filter real use cases based on matched use cases (if they have similar business process/functional areas)
+                  const filteredRealUseCases = realUseCasesData.filter((realCase: any) => {
+                    if (!selectedMetric) return true; // Show all if no filter selected
+                    // Check if any filtered matched use case relates to this real use case
+                    return filteredUseCases.some(([, useCase]: [string, any]) => {
+                      const bpText = realCase.BP || '';
+                      return bpText.includes(useCase.businessProcess) || 
+                             bpText.includes(useCase.functionalAreas?.[0] || '') ||
+                             bpText.includes(useCase.aiUseCase || '');
+                    });
+                  });
+
+                  return (
+                    <>
+                      {/* Matched Use Cases Section */}
+                      {filteredUseCases.length > 0 && (
+                        <div className="bg-white classic-shadow-lg classic-border rounded-lg p-6 sm:p-8">
+                          <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                            <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
+                            Matched Business Use Cases
+                            {selectedMetric && (
+                              <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                                Filtered by: {selectedMetric}
+                              </span>
+                            )}
+                          </h3>
+                          <div className="grid gap-6">
+                            {filteredUseCases.map(([key, useCase]: [string, any]) => (
+                              <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                                <div className="grid md:grid-cols-2 gap-4">
                                   <div>
-                                    <h4 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Primary Metric</h4>
-                                    <span className="px-3 py-1 bg-green-50 text-green-800 text-xs font-bold uppercase tracking-wide border border-green-200 rounded">
-                                      {useCase.primaryMetric}
-                                    </span>
+                                    <h4 className="font-semibold text-gray-900 mb-2">Business Process</h4>
+                                    <p className="text-gray-700 mb-4">{useCase.businessProcess}</p>
+                                    
+                                    <h4 className="font-semibold text-gray-900 mb-2">Job Role</h4>
+                                    <p className="text-gray-700 mb-4">{useCase.jobRole}</p>
+
+                                    {/* Primary and Secondary Metrics */}
+                                    <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
+                                      <div>
+                                        <h4 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Primary Metric</h4>
+                                        <span className="px-3 py-1 bg-green-50 text-green-800 text-xs font-bold uppercase tracking-wide border border-green-200 rounded">
+                                          {useCase.primaryMetric}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Secondary Metric</h4>
+                                        <span className="px-3 py-1 bg-orange-50 text-orange-800 text-xs font-bold uppercase tracking-wide border border-orange-200 rounded">
+                                          {useCase.secondaryMetric}
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Secondary Metric</h4>
-                                    <span className="px-3 py-1 bg-orange-50 text-orange-800 text-xs font-bold uppercase tracking-wide border border-orange-200 rounded">
-                                      {useCase.secondaryMetric}
-                                    </span>
+                                    <h4 className="font-semibold text-gray-900 mb-2">AI Use Case</h4>
+                                    <p className="text-gray-700 mb-4">{useCase.aiUseCase}</p>
+                                    
+                                    <h4 className="font-semibold text-gray-900 mb-2">Expected Impact</h4>
+                                    <p className="text-gray-700 mb-4">{useCase.impact}</p>
+
+                                    {/* Expected ROI */}
+                                    <div className="pt-4 border-t border-gray-200">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Expected ROI:</span>
+                                        <span className="text-sm font-bold text-green-700 bg-green-50 px-3 py-1 border border-green-200 rounded">{useCase.expectedROI}</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-900 mb-2">AI Use Case</h4>
-                                <p className="text-gray-700 mb-4">{useCase.aiUseCase}</p>
-                                
-                                <h4 className="font-semibold text-gray-900 mb-2">Expected Impact</h4>
-                                <p className="text-gray-700 mb-4">{useCase.impact}</p>
-
-                                {/* Expected ROI */}
-                                <div className="pt-4 border-t border-gray-200">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Expected ROI:</span>
-                                    <span className="text-sm font-bold text-green-700 bg-green-50 px-3 py-1 border border-green-200 rounded">{useCase.expectedROI}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
 
-                      {filteredUseCases.length === 0 && selectedMetric && (
-                        <div className="text-center py-8">
-                          <p className="text-gray-500">No use cases match the selected metric: <strong>{selectedMetric}</strong></p>
+                          {filteredUseCases.length === 0 && selectedMetric && (
+                            <div className="text-center py-8">
+                              <p className="text-gray-500">No use cases match the selected metric: <strong>{selectedMetric}</strong></p>
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
+
+                      {/* AI Use Cases Section */}
+                      {filteredAIUseCases.length > 0 && (
+                        <div className="bg-white classic-shadow-lg classic-border rounded-lg p-6 sm:p-8">
+                          <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                            <Sparkles className="w-6 h-6 mr-3 text-blue-600" />
+                            AI Implementation Details
+                            {selectedMetric && (
+                              <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                                Filtered by: {selectedMetric}
+                              </span>
+                            )}
+                          </h3>
+                          <div className="grid gap-6">
+                            {filteredAIUseCases.map(([key, aiCase]: [string, any]) => (
+                              <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                                <h4 className="font-semibold text-gray-900 mb-4 text-lg">{aiCase.useCase}</h4>
+                                
+                                {/* First Row - AI System Type and Custom Development */}
+                                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <span className="text-sm font-medium text-gray-500">AI System Type:</span>
+                                    <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                                      {aiCase.aiSystemType}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-sm font-medium text-gray-500">Custom Development Needed:</span>
+                                    <span className={`ml-2 px-2 py-1 rounded text-sm ${
+                                      aiCase.customDev 
+                                        ? 'bg-orange-100 text-orange-800' 
+                                        : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {aiCase.customDev ? 'Yes' : 'No'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Data Requirements Section */}
+                                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                                  {aiCase.dataQuantitative && (
+                                    <div>
+                                      <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Quantitative):</span>
+                                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                        <p className="text-blue-800 text-sm">{aiCase.dataQuantitative}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {aiCase.dataQualitative && (
+                                    <div>
+                                      <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Qualitative):</span>
+                                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                                        <p className="text-indigo-800 text-sm">{aiCase.dataQualitative}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Example Sources */}
+                                {aiCase.exampleSources && (
+                                  <div className="mb-4">
+                                    <span className="text-sm font-medium text-gray-500 block mb-2">Example Sources:</span>
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                      <p className="text-green-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.exampleSources}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Data Availability Notes */}
+                                {aiCase.dataAvailabilityNotes && (
+                                  <div className="mb-4">
+                                    <span className="text-sm font-medium text-gray-500 block mb-2">Data Availability Notes:</span>
+                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                      <p className="text-purple-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.dataAvailabilityNotes}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Recommended Tools */}
+                                {aiCase.tools && aiCase.tools.length > 0 && (
+                                  <div className="mb-4">
+                                    <span className="text-sm font-medium text-gray-500 block mb-2">Recommended Tools/Platforms:</span>
+                                    <div className="flex flex-wrap gap-2">
+                                      {aiCase.tools.map((tool: string, index: number) => (
+                                        <span key={index} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                                          {tool}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Implementation Notes */}
+                                {aiCase.implementationNotes && (
+                                  <div className="mb-4">
+                                    <span className="text-sm font-medium text-gray-500 block mb-2">Notes on Implementation:</span>
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                      <p className="text-yellow-800 text-sm leading-relaxed whitespace-pre-wrap">
+                                        {aiCase.implementationNotes}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Expected ROI */}
+                                {aiCase.expectedROI && (
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm font-medium text-gray-500">Expected ROI:</span>
+                                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                        {aiCase.expectedROI}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Real Use Cases Section */}
+                      {filteredRealUseCases.length > 0 && (
+                        <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
+                          <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                            <Target className="w-6 h-6 mr-3 text-purple-600" />
+                            Real World Implementation Examples
+                            {selectedMetric && (
+                              <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                                Filtered by: {selectedMetric}
+                              </span>
+                            )}
+                          </h3>
+                          <div className="space-y-6">
+                            {filteredRealUseCases.map((useCase) => (
+                              <div
+                                key={useCase.id}
+                                className="bg-white rounded-xl shadow-lg border overflow-hidden"
+                              >
+                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <Building2 className="h-6 w-6 text-blue-600" />
+                                      <h2 className="text-xl font-bold text-gray-900">{useCase.company || useCase.Company || 'Unknown Company'}</h2>
+                                    </div>
+                                    <div className="text-sm text-blue-600 font-medium">
+                                      Real World Implementation
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="p-6">
+                                  <div className="space-y-6">
+                                    <div className="flex items-start space-x-3">
+                                      <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1">
+                                        <h3 className="font-semibold text-gray-900 mb-2">Complete Business Case Details</h3>
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                          <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-sans text-justify">
+                                            {useCase.BP || 'No details available'}
+                                          </pre>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Real Project 1 with formatted text */}
+                                    {useCase['Real Project 1'] && (
+                                      <div className="flex items-start space-x-3">
+                                        <Target className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1">
+                                          <h3 className="font-semibold text-gray-900 mb-2">Real Project Implementation #1</h3>
+                                          <div className="bg-blue-50 rounded-lg p-4">
+                                            <div
+                                              className="text-sm text-blue-700 whitespace-pre-wrap leading-relaxed font-sans"
+                                              dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 1']) }}
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Real Project 2 with formatted text */}
+                                    {useCase['Real Project 2'] && (
+                                      <div className="flex items-start space-x-3">
+                                        <Target className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1">
+                                          <h3 className="font-semibold text-gray-900 mb-2">Real Project Implementation #2</h3>
+                                          <div className="bg-green-50 rounded-lg p-4">
+                                            <div
+                                              className="text-sm text-green-700 whitespace-pre-wrap leading-relaxed font-sans"
+                                              dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 2']) }}
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Additional fields */}
+                                    {useCase.Company && (
+                                      <div className="flex items-start space-x-3">
+                                        <Building2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                          <span className="text-sm font-medium text-gray-500">Company: </span>
+                                          <span className="text-sm text-gray-700">{useCase.Company}</span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {useCase.Sector && (
+                                      <div className="flex items-start space-x-3">
+                                        <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                          <span className="text-sm font-medium text-gray-500">Sector: </span>
+                                          <span className="text-sm text-gray-700">{useCase.Sector}</span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Display any other fields that might be in the data */}
+                                    {Object.entries(useCase).map(([key, value]) => {
+                                      if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && key !== 'Real Project 1' && key !== 'Real Project 2' && value) {
+                                        return (
+                                          <div key={key} className="flex items-start space-x-3">
+                                            <div className="h-5 w-5 bg-gray-300 rounded-full mt-0.5 flex-shrink-0"></div>
+                                            <div>
+                                              <span className="text-sm font-medium text-gray-500">{key}: </span>
+                                              <span className="text-sm text-gray-700">{value as string}</span>
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No Results Message */}
+                      {selectedMetric && filteredUseCases.length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-lg text-gray-500">No use cases match the selected metric: <strong>{selectedMetric}</strong></p>
+                          <p className="text-sm text-gray-400 mt-2">Try selecting a different metric or clear the filter to see all results.</p>
+                        </div>
+                      )}
+                    </>
                   );
                 })()}
-
-                {/* AI Use Cases Section */}
-                {Object.keys(generatedStrategy.aiUseCases).length > 0 && (
-                    <div className="bg-white classic-shadow-lg classic-border rounded-lg p-6 sm:p-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                      <Sparkles className="w-6 h-6 mr-3 text-blue-600" />
-                      AI Implementation Details
-                    </h3>
-                    <div className="grid gap-6">
-                      {Object.entries(generatedStrategy.aiUseCases).map(([key, aiCase]: [string, any]) => (
-                        <div key={key} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <h4 className="font-semibold text-gray-900 mb-4 text-lg">{aiCase.useCase}</h4>
-                          
-                          {/* First Row - AI System Type and Custom Development */}
-                          <div className="grid md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <span className="text-sm font-medium text-gray-500">AI System Type:</span>
-                              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                                {aiCase.aiSystemType}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-sm font-medium text-gray-500">Custom Development Needed:</span>
-                              <span className={`ml-2 px-2 py-1 rounded text-sm ${
-                                aiCase.customDev 
-                                  ? 'bg-orange-100 text-orange-800' 
-                                  : 'bg-green-100 text-green-800'
-                              }`}>
-                                {aiCase.customDev ? 'Yes' : 'No'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Data Requirements Section */}
-                          <div className="grid md:grid-cols-2 gap-4 mb-4">
-                            {aiCase.dataQuantitative && (
-                              <div>
-                                <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Quantitative):</span>
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                  <p className="text-blue-800 text-sm">{aiCase.dataQuantitative}</p>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {aiCase.dataQualitative && (
-                              <div>
-                                <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Qualitative):</span>
-                                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-                                  <p className="text-indigo-800 text-sm">{aiCase.dataQualitative}</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Example Sources */}
-                          {aiCase.exampleSources && (
-                            <div className="mb-4">
-                              <span className="text-sm font-medium text-gray-500 block mb-2">Example Sources:</span>
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <p className="text-green-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.exampleSources}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Data Availability Notes */}
-                          {aiCase.dataAvailabilityNotes && (
-                            <div className="mb-4">
-                              <span className="text-sm font-medium text-gray-500 block mb-2">Data Availability Notes:</span>
-                              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                <p className="text-purple-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.dataAvailabilityNotes}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Recommended Tools */}
-                          {aiCase.tools && aiCase.tools.length > 0 && (
-                            <div className="mb-4">
-                              <span className="text-sm font-medium text-gray-500 block mb-2">Recommended Tools/Platforms:</span>
-                              <div className="flex flex-wrap gap-2">
-                                {aiCase.tools.map((tool: string, index: number) => (
-                                  <span key={index} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
-                                    {tool}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Implementation Notes */}
-                          {aiCase.implementationNotes && (
-                            <div className="mb-4">
-                              <span className="text-sm font-medium text-gray-500 block mb-2">Notes on Implementation:</span>
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                <p className="text-yellow-800 text-sm leading-relaxed whitespace-pre-wrap">
-                                  {aiCase.implementationNotes}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Expected ROI */}
-                          {aiCase.expectedROI && (
-                            <div className="pt-3 border-t border-gray-200">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-500">Expected ROI:</span>
-                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                                  {aiCase.expectedROI}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Real Use Cases Section */}
-                {realUseCasesData.length > 0 && (
-                  <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                      <Target className="w-6 h-6 mr-3 text-purple-600" />
-                      Real World Implementation Examples
-                    </h3>
-                    <div className="space-y-6">
-                      {realUseCasesData.map((useCase) => (
-                        <div
-                          key={useCase.id}
-                          className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                        >
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-4 border-b mb-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <Building2 className="h-6 w-6 text-blue-600" />
-                                <h2 className="text-xl font-bold text-gray-900">{useCase.Company || 'Company Example'}</h2>
-                              </div>
-                              <div className="text-sm text-blue-600 font-medium">
-                                Real World Implementation
-                              </div>
-                            </div>
-                          </div>
-
-                            <div className="space-y-5">
-                            <div>
-                              <h3 className="font-semibold text-gray-900 mb-2">Business Case Details</h3>
-                              <div className="bg-gray-50 rounded-lg p-4 sm:p-5 overflow-x-auto">
-                                <div className="text-gray-700 whitespace-pre-wrap leading-relaxed text-xs sm:text-sm min-w-[260px]">
-                                  {useCase.BP ? useCase.BP.split('\n').map((line: string, idx: number) => (
-                                    <p key={idx} className="mb-2">{line}</p>
-                                  )) : 'No details available'}
-                                </div>
-                              </div>
-                            </div>
-
-                            {useCase['Real Project 1'] && (
-                              <div>
-                                <h3 className="font-semibold text-gray-900 mb-2">Project Implementation 1</h3>
-                                <div className="bg-blue-50 rounded-lg p-4 sm:p-5">
-                                  <div 
-                                    className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
-                                    dangerouslySetInnerHTML={{ 
-                                      __html: formatTextWithBoldHeadings(useCase['Real Project 1']) 
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {useCase['Real Project 2'] && (
-                              <div>
-                                <h3 className="font-semibold text-gray-900 mb-2">Project Implementation 2</h3>
-                                <div className="bg-green-50 rounded-lg p-4 sm:p-5">
-                                  <div 
-                                    className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"
-                                    dangerouslySetInnerHTML={{ 
-                                      __html: formatTextWithBoldHeadings(useCase['Real Project 2']) 
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Additional Information Section */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                              {useCase.Sector && (
-                                <div className="bg-indigo-50 p-4 rounded-lg">
-                                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
-                                    <TrendingUp className="h-4 w-4 text-indigo-600 mr-2" />
-                                    Sector
-                                  </h4>
-                                  <p className="text-gray-700">{useCase.Sector}</p>
-                                </div>
-                              )}
-                              
-                              {useCase.Industry && (
-                                <div className="bg-purple-50 p-4 rounded-lg">
-                                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
-                                    <Building2 className="h-4 w-4 text-purple-600 mr-2" />
-                                    Industry
-                                  </h4>
-                                  <p className="text-gray-700">{useCase.Industry}</p>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Display any other fields from the real use case */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 mt-3">
-                              {Object.entries(useCase).map(([key, value]: [string, any]) => {
-                                // Skip fields we've already rendered or empty values
-                                if (['BP', 'Company', 'Sector', 'Industry', 'id', 'Real Project 1', 'Real Project 2'].includes(key) || !value) {
-                                  return null;
-                                }
-                                return (
-                                  <div key={key} className="bg-gray-50 p-4 rounded-lg">
-                                    <h4 className="font-semibold text-gray-900 mb-2 capitalize">
-                                      {key.replace(/_/g, ' ')}
-                                    </h4>
-                                    <p className="text-gray-700">{String(value)}</p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {loadingRealUseCases && (
                   <div className="bg-white classic-shadow-lg classic-border rounded-lg p-8">
