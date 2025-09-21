@@ -107,8 +107,29 @@ export interface StrategicAlignment {
   willingnessToChange: number;
 }
 
+export interface ROICalculation {
+  totalEffortPerMonth: number;
+  currentProcessCost: number;
+  timePerInstanceBefore: number;
+  timePerInstanceAfter: number;
+  effortAfterAutomation: number;
+  costAfterAutomation: number;
+  revenueImpact: number;
+  capex: number;
+  calculatedMetrics: {
+    newTimePerInstance: number;
+    timeSavedPerMonth: number;
+    laborCostSavings: number;
+    totalMonthlyGain: number;
+    totalAnnualGain: number;
+    paybackPeriod: number;
+    roiPercentage: number;
+  };
+}
+
 export interface CurrentStateAnalysis {
   companyInfo: CompanyInfo;
+  roiCalculation?: ROICalculation;
   rawMaterialProcess: RawMaterialProcess;
   productionProcess: ProductionProcess;
   technologySystems: TechnologySystems;

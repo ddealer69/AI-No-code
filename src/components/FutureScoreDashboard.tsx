@@ -6,7 +6,7 @@ interface FutureScoreDashboardProps {
   scores: FutureScoreBreakdown;
 }
 
-const FutureScoreDashboard: React.FC<FutureScoreDashboardProps> = ({ scores }) => {
+const FutureScoreDashboard  : React.FC<FutureScoreDashboardProps> = ({ scores }) => {
   const getOutcomeColor = (outcome: string) => {
     switch (outcome) {
       case 'Comprehensive transformation strategy':

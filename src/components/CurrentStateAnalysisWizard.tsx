@@ -3,13 +3,14 @@ import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { CurrentStateAnalysis, ScoreBreakdown } from '../types/currentStateAnalysis';
 import ScoreDashboard from './ScoreDashboard';
 import Step1CompanyInfo from './steps/Step1CompanyInfo';
-import Step2ProcessBreakdown from './steps/Step2ProcessBreakdown';
-import Step3Technology from './steps/Step3Technology';
-import Step4PeopleAndCulture from './steps/Step4PeopleAndCulture';
-import Step5PainPoints from './steps/Step5PainPoints';
-import Step6Productivity from './steps/Step6Productivity';
-import Step7AutomationPotential from './steps/Step7AutomationPotential';
-import Step8Review from './steps/Step8Review';
+import Step2ROICalculation from './steps/Step2ROICalculation';
+import Step3ProcessBreakdown from './steps/Step2ProcessBreakdown';
+import Step4Technology from './steps/Step3Technology';
+import Step5PeopleAndCulture from './steps/Step4PeopleAndCulture';
+import Step6PainPoints from './steps/Step5PainPoints';
+import Step7Productivity from './steps/Step6Productivity';
+import Step8AutomationPotential from './steps/Step7AutomationPotential';
+import Step9Review from './steps/Step8Review';
 
 interface CurrentStateAnalysisProps {
   onComplete: (analysis: CurrentStateAnalysis, scores: ScoreBreakdown) => void;
@@ -32,6 +33,25 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
       numberOfShifts: 1,
       numberOfEmployees: 1,
       supervisorRatio: ''
+    },
+    roiCalculation: {
+      totalEffortPerMonth: 160,
+      currentProcessCost: 600000,
+      timePerInstanceBefore: 120,
+      timePerInstanceAfter: 30,
+      effortAfterAutomation: 60,
+      costAfterAutomation: 200000,
+      revenueImpact: 0,
+      capex: 0,
+      calculatedMetrics: {
+        newTimePerInstance: 0,
+        timeSavedPerMonth: 0,
+        laborCostSavings: 0,
+        totalMonthlyGain: 0,
+        totalAnnualGain: 0,
+        paybackPeriod: 0,
+        roiPercentage: 0,
+      }
     },
     rawMaterialProcess: {
       unitsInBatch: 0,
@@ -176,13 +196,14 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
 
   const steps = [
     { id: 1, title: 'Company Info', component: Step1CompanyInfo },
-    { id: 2, title: 'Process Breakdown', component: Step2ProcessBreakdown },
-    { id: 3, title: 'Technology & Data', component: Step3Technology },
-    { id: 4, title: 'People & Culture', component: Step4PeopleAndCulture },
-    { id: 5, title: 'Pain Points', component: Step5PainPoints },
-    { id: 6, title: 'Productivity', component: Step6Productivity },
-    { id: 7, title: 'Automation Potential', component: Step7AutomationPotential },
-    { id: 8, title: 'Review & Submit', component: Step8Review }
+    { id: 2, title: 'ROI Analysis', component: Step2ROICalculation },
+    { id: 3, title: 'Process Breakdown', component: Step3ProcessBreakdown },
+    { id: 4, title: 'Technology & Data', component: Step4Technology },
+    { id: 5, title: 'People & Culture', component: Step5PeopleAndCulture },
+    { id: 6, title: 'Pain Points', component: Step6PainPoints },
+    { id: 7, title: 'Productivity', component: Step7Productivity },
+    { id: 8, title: 'Automation Potential', component: Step8AutomationPotential },
+    { id: 9, title: 'Review & Submit', component: Step9Review }
   ];
 
   const currentStepData = steps.find(step => step.id === currentStep);
@@ -226,7 +247,7 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
               <button className="py-2 px-1 border-b-2 border-blue-500 text-blue-600 font-medium text-lg cursor-default">
                 Financials
               </button>
-            </div>
+            </div>  
           </nav>
         </div>
 

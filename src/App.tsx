@@ -76,6 +76,7 @@ function AppContent() {
         return <Dashboard 
           onGenerateStrategy={handleGenerateStrategy} 
           onStartAnalysis={() => setCurrentView('analysis')}
+          onStartFutureAnalysis={() => setCurrentView('future-analysis')}
           onSectorChange={setSelectedSector}
           initialTab={activeTab}
           realUseCasesData={realUseCasesData}
