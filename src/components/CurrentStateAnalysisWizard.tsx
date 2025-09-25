@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, Download } from 'lucide-react';
 import { CurrentStateAnalysis, ScoreBreakdown } from '../types/currentStateAnalysis';
 import ScoreDashboard from './ScoreDashboard';
 import Step1CompanyInfo from './steps/Step1CompanyInfo';
@@ -225,6 +225,104 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
     onComplete(formData, scores);
   };
 
+  // Generate a human-readable plain-text report of all captured inputs & scores
+  const generateCurrentStateReportText = (): string => {
+    const ts = new Date().toISOString();
+    const { companyInfo, roiCalculation, rawMaterialProcess, productionProcess, technologySystems, workforceSkills, painPoints, productivityMetrics, automationPotential, dataReadiness, strategicAlignment } = formData;
+
+    const line = (label: string, value: any) => `${label}: ${value === undefined || value === null || value === '' ? '—' : value}`;
+
+    const section = (title: string) => `\n==================== ${title} ====================\n`;
+
+    const painPointLines = Object.entries(painPoints).map(([k, v]: any) => `${k}: value=${v.absoluteValue || '—'} | score=${v.score}`);
+
+    const simpleObjectLines = (obj: Record<string, any>) => Object.entries(obj).map(([k, v]) => line(k, v));
+
+    const calc = roiCalculation?.calculatedMetrics || {
+      newTimePerInstance: 0,
+      timeSavedPerMonth: 0,
+      laborCostSavings: 0,
+      totalMonthlyGain: 0,
+      totalAnnualGain: 0,
+      paybackPeriod: 0,
+      roiPercentage: 0,
+    };
+
+    const report: string[] = [];
+    report.push('CURRENT STATE ANALYSIS REPORT');
+    report.push(`Generated: ${ts}`);
+    report.push(section('Company Information'));
+    report.push(...simpleObjectLines(companyInfo));
+
+    report.push(section('ROI Calculation (Inputs)'));
+    const { calculatedMetrics, ...roiInputs } = roiCalculation as any;
+    report.push(...simpleObjectLines(roiInputs));
+    report.push(section('ROI Calculation (Calculated Metrics)'));
+    report.push(...simpleObjectLines(calc));
+
+    report.push(section('Raw Material / Process'));
+    report.push(...simpleObjectLines(rawMaterialProcess));
+
+    report.push(section('Production Process - Stage 1'));
+    report.push(...simpleObjectLines(productionProcess.stage1));
+    report.push(section('Production Process - Stage 2'));
+    report.push(...simpleObjectLines(productionProcess.stage2));
+
+    report.push(section('Technology & Systems'));
+    report.push(...simpleObjectLines(technologySystems));
+
+    report.push(section('Workforce Skills'));
+    report.push(...simpleObjectLines(workforceSkills));
+
+    report.push(section('Pain Points'));
+    report.push(...painPointLines);
+
+    report.push(section('Productivity Metrics'));
+    report.push(...simpleObjectLines(productivityMetrics));
+
+    report.push(section('Automation Potential'));
+    report.push(...simpleObjectLines(automationPotential));
+
+    report.push(section('Data Readiness'));
+    report.push(...simpleObjectLines(dataReadiness));
+
+    report.push(section('Strategic Alignment'));
+    report.push(...simpleObjectLines(strategicAlignment));
+
+    report.push(section('Score Breakdown'));
+    report.push(line('Technology Systems', scores.technologySystems));
+    report.push(line('Workforce Skills', scores.workforceSkills));
+    report.push(line('Pain Points', scores.painPoints));
+    report.push(line('Productivity Metrics', scores.productivityMetrics));
+    report.push(line('Automation Potential', scores.automationPotential));
+    report.push(line('Data Readiness', scores.dataReadiness));
+    report.push(line('Strategic Alignment', scores.strategicAlignment));
+    report.push(line('TOTAL SCORE', scores.total));
+    report.push(line('OUTCOME', scores.outcome));
+
+    return report.join('\n');
+  };
+
+  const downloadCurrentStateReport = () => {
+    try {
+      const text = generateCurrentStateReportText();
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const company = formData.companyInfo.companyName?.trim().replace(/[^a-z0-9]+/gi, '_') || 'company';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      a.href = url;
+      a.download = `CurrentState_${company}_${timestamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download current state report', e);
+      alert('Failed to generate report. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -324,7 +422,7 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
               </button>
               
               {currentStep === steps.length ? (
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-4">
                   <button
                     onClick={handleComplete}
                     className="flex items-center justify-center px-6 sm:px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm sm:text-base"
@@ -332,7 +430,14 @@ const CurrentStateAnalysisWizard: React.FC<CurrentStateAnalysisProps> = ({ onCom
                     Complete Analysis
                     <CheckCircle2 className="w-4 h-4 ml-2" />
                   </button>
-                  
+                  <button
+                    onClick={downloadCurrentStateReport}
+                    className="flex items-center justify-center px-6 sm:px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm sm:text-base"
+                    aria-label="Download Current State Report"
+                  >
+                    Download Report
+                    <Download className="w-4 h-4 ml-2" />
+                  </button>
                   {onStartFutureAnalysis && (
                     <button
                       onClick={onStartFutureAnalysis}

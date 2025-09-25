@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, Building2, TrendingUp, Filter } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, TrendingUp, Filter, Globe, MapPin, Lightbulb, FileText } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
 import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
-import { searchRealCasesInCSV, loadCSVContent, RealCaseMatch } from '../utils/csvRealCasesService';
+import { searchRealCasesInCSV, loadCSVContent } from '../utils/csvRealCasesService';
 
 interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
@@ -25,21 +25,20 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   // Tab navigation state
   const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>(initialTab);
-  // Strategy data state
+  // Generated strategy data
   const [generatedStrategy, setGeneratedStrategy] = useState<StrategyResponse | null>(null);
-  // Metric filter state for implementation tab
+  // Metric filter state (implementation tab)
   const [selectedMetric, setSelectedMetric] = useState<string>('');
-  // Real use cases data from Supabase
+  // Real use cases fetched from CSV / DB
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>(propRealUseCasesData);
   const [loadingRealUseCases, setLoadingRealUseCases] = useState(false);
-  // Financial dropdown state
+  // Financials dropdown visibility
   const [showFinancialDropdown, setShowFinancialDropdown] = useState(false);
-  
-  // If we receive real use cases data from props, use it
+
+  // Sync prop real use cases if passed in
   useEffect(() => {
     if (propRealUseCasesData && propRealUseCasesData.length > 0) {
       setRealUseCasesData(propRealUseCasesData);
-      console.log("Received real use cases data from props:", propRealUseCasesData);
     }
   }, [propRealUseCasesData]);
 
@@ -48,32 +47,23 @@ const Dashboard: React.FC<DashboardProps> = ({
     setSelectedMetric('');
   }, [activeTab]);
 
-  // Close dropdown when clicking outside
+  // Close financial dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = () => {
-      setShowFinancialDropdown(false);
-    };
-
+    const handleClickOutside = () => setShowFinancialDropdown(false);
     if (showFinancialDropdown) {
       document.addEventListener('click', handleClickOutside);
     }
-
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
+    return () => document.removeEventListener('click', handleClickOutside);
   }, [showFinancialDropdown]);
-  
-  const [filters, setFilters] = useState<FilterData>({
-    sector: '',
-    domain: '',
-    process: '',
-    stage: ''
-  });
+
+  // Filter selections and generation state
+  const [filters, setFilters] = useState<FilterData>({ sector: '', domain: '', process: '', stage: '' });
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Select options state
   const sectors = ['Service', 'Manufacturing'];
   const [domains, setDomains] = useState<string[]>([]);
-  const [processes, setProcesses] = useState<string[]>([]); // Now used for Key Functional Areas
+  const [processes, setProcesses] = useState<string[]>([]);
   const [stages, setStages] = useState<string[]>([]);
 
   // Fetch Key Functional Areas when domain changes
@@ -83,46 +73,33 @@ const Dashboard: React.FC<DashboardProps> = ({
         setProcesses([]);
         return;
       }
-      
       try {
         const tableName = filters.sector === 'Service' ? 'Service_Match_Cases' : 'Manufacturing_Match_Case';
         const { data, error } = await supabase
           .from(tableName)
           .select('Business-process,Key_Functional_Areas');
-          
         if (error) {
           console.error('Supabase error:', error);
           setProcesses([]);
           return;
         }
-        
         if (!data || !data.length) {
-          console.log('No data returned for', filters.domain);
           setProcesses([]);
           return;
         }
-        
-        console.log('Data returned:', data);
-        
         // Case-insensitive match for Business-process
-        const filtered = data.filter((row: any) => 
-          row['Business-process'] && 
-          typeof row['Business-process'] === 'string' && 
+        const filtered = data.filter((row: any) =>
+          row['Business-process'] &&
+          typeof row['Business-process'] === 'string' &&
           row['Business-process'].toLowerCase() === filters.domain.toLowerCase()
         );
-        
-        console.log('Filtered data:', filtered);
-        
         const uniqueAreas = Array.from(new Set(filtered.map((row: any) => row['Key_Functional_Areas']).filter(Boolean)));
-        console.log('Unique areas:', uniqueAreas);
-        
         setProcesses(uniqueAreas);
       } catch (err) {
         console.error('Failed to fetch processes:', err);
         setProcesses([]);
       }
     };
-    
     fetchProcesses();
   }, [filters.sector, filters.domain]);
 
@@ -247,6 +224,124 @@ const Dashboard: React.FC<DashboardProps> = ({
     });
     
     return formattedText;
+  };
+
+  // (Summary function removed; only full report export retained)
+
+  // (Summary download removed; using single full report export)
+
+  // Generate a FULL comprehensive report (everything fetched) as plain text
+  const generateFullReportText = () => {
+    const lines: string[] = [];
+    const timestamp = new Date().toISOString();
+    lines.push('AI STRATEGY – FULL COMPREHENSIVE REPORT');
+    lines.push(`Generated: ${timestamp}`);
+    lines.push(''.padEnd(80, '='));
+
+    // Filters
+    lines.push('\nSELECTED FILTERS');
+    lines.push('-'.repeat(40));
+    if (filters.sector) lines.push(`Sector: ${filters.sector}`);
+    if (filters.domain) lines.push(`Domain: ${filters.domain}`);
+    if (filters.process) lines.push(`Key Functional Area: ${filters.process}`);
+    if (filters.stage) lines.push(`Job Role: ${filters.stage}`);
+    if (!filters.sector && !filters.domain && !filters.process && !filters.stage) lines.push('None selected');
+
+    // Matched Business Use Cases
+    if (generatedStrategy?.matchedUseCases) {
+      const matched = Object.values(generatedStrategy.matchedUseCases as unknown as Record<string, any>);
+      lines.push('\nMATCHED BUSINESS USE CASES');
+      lines.push('-'.repeat(40));
+      if (matched.length === 0) {
+        lines.push('No matched business use cases.');
+      } else {
+        matched.forEach((uc: any, idx: number) => {
+          lines.push(`\n${idx + 1}. ${uc.businessProcess || uc.name || 'Business Process'}`);
+          if (uc.jobRole) lines.push(`   Job Role: ${uc.jobRole}`);
+          if (uc.functionalAreas && uc.functionalAreas.length) lines.push(`   Functional Areas: ${uc.functionalAreas.join(', ')}`);
+          if (uc.aiUseCase) lines.push(`   AI Use Case: ${uc.aiUseCase}`);
+          if (uc.impact) lines.push(`   Impact: ${uc.impact}`);
+          if (uc.primaryMetric) lines.push(`   Primary Metric: ${uc.primaryMetric}`);
+          if (uc.secondaryMetric) lines.push(`   Secondary Metric: ${uc.secondaryMetric}`);
+          if (uc.expectedROI) lines.push(`   Expected ROI: ${uc.expectedROI}`);
+        });
+      }
+    }
+
+    // AI Implementation Details
+    if (generatedStrategy?.aiUseCases) {
+      const aiCases = Object.values(generatedStrategy.aiUseCases as unknown as Record<string, any>);
+      lines.push('\nAI IMPLEMENTATION DETAILS');
+      lines.push('-'.repeat(40));
+      if (aiCases.length === 0) {
+        lines.push('No AI implementation details available.');
+      } else {
+        aiCases.forEach((ai: any, idx: number) => {
+          lines.push(`\n${idx + 1}. ${ai.useCase || ai['Use Case'] || 'AI Use Case'}`);
+          if (ai.aiSystemType) lines.push(`   System Type: ${ai.aiSystemType}`);
+          if (Array.isArray(ai.tools) && ai.tools.length) lines.push(`   Tools/Platforms: ${ai.tools.join(', ')}`);
+          if (typeof ai.customDev !== 'undefined') lines.push(`   Custom Development: ${ai.customDev ? 'Yes' : 'No'}`);
+          if (ai.dataQuantitative) lines.push(`   Data Needs (Quantitative): ${ai.dataQuantitative}`);
+          if (ai.dataQualitative) lines.push(`   Data Needs (Qualitative): ${ai.dataQualitative}`);
+          if (ai.exampleSources) lines.push(`   Example Sources: ${ai.exampleSources}`);
+          if (ai.dataAvailabilityNotes) lines.push(`   Data Availability Notes: ${ai.dataAvailabilityNotes}`);
+          if (ai.implementationNotes) lines.push(`   Implementation Notes: ${ai.implementationNotes}`);
+          if (ai.expectedROI) lines.push(`   Expected ROI: ${ai.expectedROI}`);
+        });
+      }
+    }
+
+    // Real World Implementation Examples (from state realUseCasesData)
+    if (realUseCasesData && realUseCasesData.length) {
+      lines.push('\nREAL WORLD IMPLEMENTATION EXAMPLES');
+      lines.push('-'.repeat(40));
+      realUseCasesData.forEach((rc: any, idx: number) => {
+        lines.push(`\n${idx + 1}. Company: ${rc.Company || rc.company || 'Example'}`);
+        if (rc.Sector) lines.push(`   Sector: ${rc.Sector}`);
+        if (rc.matchScore !== undefined) lines.push(`   Match Score: ${rc.matchScore}`);
+        if (rc.BP) {
+          lines.push('   Business Overview:');
+          rc.BP.split('\n').forEach((l: string) => lines.push(`     ${l}`));
+        }
+        if (rc['Real Project 1']) {
+          lines.push('   Project 1:');
+          rc['Real Project 1'].split('\n').forEach((l: string) => lines.push(`     ${l}`));
+        }
+        if (rc['Real Project 2']) {
+          lines.push('   Project 2:');
+          rc['Real Project 2'].split('\n').forEach((l: string) => lines.push(`     ${l}`));
+        }
+      });
+    } else {
+      lines.push('\nREAL WORLD IMPLEMENTATION EXAMPLES');
+      lines.push('-'.repeat(40));
+      lines.push('No real world examples loaded yet.');
+    }
+
+    // Summary Statistics
+    lines.push('\nSUMMARY STATISTICS');
+    lines.push('-'.repeat(40));
+    lines.push(`Matched Business Use Cases: ${generatedStrategy?.matchedUseCases ? Object.keys(generatedStrategy.matchedUseCases).length : 0}`);
+    lines.push(`AI Implementation Details: ${generatedStrategy?.aiUseCases ? Object.keys(generatedStrategy.aiUseCases).length : 0}`);
+    lines.push(`Real World Examples: ${realUseCasesData ? realUseCasesData.length : 0}`);
+    lines.push(`Active Tab: ${activeTab}`);
+    lines.push(''.padEnd(80, '='));
+    lines.push('END OF FULL REPORT');
+    return lines.join('\n');
+  };
+
+  const downloadFullReport = () => {
+    if (!generatedStrategy) return; // Only allow when a strategy is generated
+    const fullText = generateFullReportText();
+    const blob = new Blob([fullText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ai-strategy-full-report-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Search CSV file for real use cases matching the given use case
@@ -773,6 +868,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </nav>
         </div>
+        
+        {/* (Report download button moved to bottom of implementation tab) */}
       </div>
 
       {/* Header Title - Only show for identification tab */}
@@ -1195,110 +1292,77 @@ const Dashboard: React.FC<DashboardProps> = ({
                               </span>
                             )}
                           </h3>
-                          <div className="space-y-6">
+                          
+                          <div className="grid gap-8">
                             {filteredRealUseCases.map((useCase) => (
                               <div
                                 key={useCase.id}
-                                className="bg-white rounded-xl shadow-lg border overflow-hidden"
+                                className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
                               >
-                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                      <Building2 className="h-6 w-6 text-blue-600" />
-                                      <h2 className="text-xl font-bold text-gray-900">{useCase.company || useCase.Company || 'Unknown Company'}</h2>
-                                    </div>
-                                    <div className="text-sm text-blue-600 font-medium">
-                                      Real World Implementation
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="p-6">
-                                  <div className="space-y-6">
-                                    <div className="flex items-start space-x-3">
-                                      <Target className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                      <div className="flex-1">
-                                        <h3 className="font-semibold text-gray-900 mb-2">Complete Business Case Details</h3>
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                          <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-sans text-justify">
-                                            {useCase.BP || 'No details available'}
-                                          </pre>
+                                <div className="p-8">
+                                  {/* Business Case Overview */}
+                                  {useCase.BP && (
+                                    <div className="mb-8">
+                                      <div className="flex items-center mb-4">
+                                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                          <Lightbulb className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900">Business Overview</h3>
+                                      </div>
+                                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-l-4 border-blue-500">
+                                        <div className="text-sm text-gray-700 leading-relaxed">
+                                          {useCase.BP}
                                         </div>
                                       </div>
                                     </div>
+                                  )}
 
-                                    {/* Real Project 1 with formatted text */}
+                                  {/* Implementation Projects */}
+                                  <div className="grid lg:grid-cols-2 gap-6">
+                                    {/* Real Project 1 */}
                                     {useCase['Real Project 1'] && (
-                                      <div className="flex items-start space-x-3">
-                                        <Target className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                                        <div className="flex-1">
-                                          <h3 className="font-semibold text-gray-900 mb-2">Real Project Implementation #1</h3>
-                                          <div className="bg-blue-50 rounded-lg p-4">
-                                            <div
-                                              className="text-sm text-blue-700 whitespace-pre-wrap leading-relaxed font-sans"
-                                              dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 1']) }}
-                                            />
+                                      <div className="group">
+                                        <div className="flex items-center mb-4">
+                                          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3 text-white">
+                                            <span className="text-sm font-bold">1</span>
                                           </div>
+                                          <h3 className="text-lg font-semibold text-gray-900">Global Implementation</h3>
+                                          <div className="ml-auto">
+                                            <Globe className="w-5 h-5 text-blue-500" />
+                                          </div>
+                                        </div>
+                                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 group-hover:shadow-lg transition-shadow duration-300">
+                                          <div 
+                                            className="text-sm text-blue-800 leading-relaxed space-y-3"
+                                            dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 1']) }}
+                                          />
                                         </div>
                                       </div>
                                     )}
 
-                                    {/* Real Project 2 with formatted text */}
+                                    {/* Real Project 2 */}
                                     {useCase['Real Project 2'] && (
-                                      <div className="flex items-start space-x-3">
-                                        <Target className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
-                                        <div className="flex-1">
-                                          <h3 className="font-semibold text-gray-900 mb-2">Real Project Implementation #2</h3>
-                                          <div className="bg-green-50 rounded-lg p-4">
-                                            <div
-                                              className="text-sm text-green-700 whitespace-pre-wrap leading-relaxed font-sans"
-                                              dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 2']) }}
-                                            />
+                                      <div className="group">
+                                        <div className="flex items-center mb-4">
+                                          <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center mr-3 text-white">
+                                            <span className="text-sm font-bold">2</span>
+                                          </div>
+                                          <h3 className="text-lg font-semibold text-gray-900">Regional Implementation</h3>
+                                          <div className="ml-auto">
+                                            <MapPin className="w-5 h-5 text-emerald-500" />
                                           </div>
                                         </div>
-                                      </div>
-                                    )}
-
-                                    {/* Additional fields */}
-                                    {useCase.Company && (
-                                      <div className="flex items-start space-x-3">
-                                        <Building2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                          <span className="text-sm font-medium text-gray-500">Company: </span>
-                                          <span className="text-sm text-gray-700">{useCase.Company}</span>
+                                        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200 group-hover:shadow-lg transition-shadow duration-300">
+                                          <div 
+                                            className="text-sm text-emerald-800 leading-relaxed space-y-3"
+                                            dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 2']) }}
+                                          />
                                         </div>
                                       </div>
                                     )}
-
-                                    {useCase.Sector && (
-                                      <div className="flex items-start space-x-3">
-                                        <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                          <span className="text-sm font-medium text-gray-500">Sector: </span>
-                                          <span className="text-sm text-gray-700">{useCase.Sector}</span>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Display any other fields that might be in the data */}
-                                    {Object.entries(useCase).map(([key, value]) => {
-                                      if (key !== 'BP' && key !== 'Company' && key !== 'Sector' && key !== 'id' && 
-                                          key !== 'Real Project 1' && key !== 'Real Project 2' && 
-                                          key !== 'details' && key !== 'company' && key !== 'realCase1' && 
-                                          key !== 'realCase2' && key !== 'matchScore' && value) {
-                                        return (
-                                          <div key={key} className="flex items-start space-x-3">
-                                            <div className="h-5 w-5 bg-gray-300 rounded-full mt-0.5 flex-shrink-0"></div>
-                                            <div>
-                                              <span className="text-sm font-medium text-gray-500">{key}: </span>
-                                              <span className="text-sm text-gray-700">{value as string}</span>
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-                                      return null;
-                                    })}
                                   </div>
+
+
                                 </div>
                               </div>
                             ))}
@@ -1341,6 +1405,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Proceed to Financial Analysis
+                  </button>
+                </div>
+
+                {/* Download Report Button at Bottom */}
+                <div className="mt-10 flex justify-center px-2">
+                  <button
+                    onClick={downloadFullReport}
+                    disabled={!generatedStrategy}
+                    className={`inline-flex items-center gap-2 px-7 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed ${generatedStrategy ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-300 text-white'}`}
+                    aria-label="Download full comprehensive AI strategy report as text"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Download Report
                   </button>
                 </div>
               </div>

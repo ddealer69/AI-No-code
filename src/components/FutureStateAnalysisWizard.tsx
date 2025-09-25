@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Target, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Target, CheckCircle2, Download } from 'lucide-react';
 import { FutureStateAnalysis, FutureScoreBreakdown } from '../types/futureStateAnalysis';
 import { CurrentStateAnalysis, ScoreBreakdown } from '../types/currentStateAnalysis';
 import FutureScoreDashboard from './FutureScoreDashboard';
@@ -195,6 +195,96 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
     onComplete(formData, scores);
   };
 
+  // Generate a comprehensive plain-text report of the future state analysis
+  const generateFutureStateReportText = (): string => {
+    const ts = new Date().toISOString();
+    const section = (title: string) => `\n==================== ${title.toUpperCase()} ====================\n`;
+    const line = (label: string, value: any) => `${label}: ${value === undefined || value === null || value === '' ? '—' : value}`;
+
+    const simpleObjectLines = (obj: Record<string, any>) => Object.entries(obj).map(([k, v]) => line(k, v));
+
+    const { companyVision, processImprovement, technologyRoadmap, futureWorkforce, businessImpact, futureProductivity, implementationStrategy, investmentPlanning, riskManagement } = formData;
+
+    const businessImpactLines = Object.entries(businessImpact).map(([k, v]: any) => `${k}: target=${v.absoluteValue || '—'} | score=${v.score}`);
+
+    const report: string[] = [];
+    report.push('FUTURE STATE ANALYSIS REPORT');
+    report.push(`Generated: ${ts}`);
+
+    if (currentAnalysis) {
+      report.push(section('Current State Context (Summary)'));
+      const ca = currentAnalysis.analysis.companyInfo;
+      if (ca) {
+        report.push(line('Company Name', ca.companyName));
+        report.push(line('Location', ca.location));
+        report.push(line('Primary Products', ca.primaryProducts));
+        report.push(line('Process Name', ca.processName));
+      }
+      report.push(line('Current Total Score', currentAnalysis.scores.total));
+      report.push(line('Current Outcome', currentAnalysis.scores.outcome));
+    }
+
+    report.push(section('Company Vision & Strategy'));
+    report.push(...simpleObjectLines(companyVision));
+
+    report.push(section('Process Improvement Targets'));
+    report.push(...simpleObjectLines(processImprovement));
+
+    report.push(section('Technology Roadmap'));
+    report.push(...simpleObjectLines(technologyRoadmap));
+
+    report.push(section('Future Workforce & Change'));
+    report.push(...simpleObjectLines(futureWorkforce));
+
+    report.push(section('Business Impact Targets'));
+    report.push(...businessImpactLines);
+
+    report.push(section('Future Productivity & Performance'));
+    report.push(...simpleObjectLines(futureProductivity));
+
+    report.push(section('Implementation Strategy'));
+    report.push(...simpleObjectLines(implementationStrategy));
+
+    report.push(section('Investment Planning'));
+    report.push(...simpleObjectLines(investmentPlanning));
+
+    report.push(section('Risk Management'));
+    report.push(...simpleObjectLines(riskManagement));
+
+    report.push(section('Score Breakdown'));
+    report.push(line('Technology Roadmap', scores.technologyRoadmap));
+    report.push(line('Future Workforce', scores.futureWorkforce));
+    report.push(line('Business Impact', scores.businessImpact));
+    report.push(line('Future Productivity', scores.futureProductivity));
+    report.push(line('Implementation Strategy', scores.implementationStrategy));
+    report.push(line('Investment Planning', scores.investmentPlanning));
+    report.push(line('Risk Management', scores.riskManagement));
+    report.push(line('TOTAL SCORE', scores.total));
+    report.push(line('OUTCOME', scores.outcome));
+
+    return report.join('\n');
+  };
+
+  const downloadFutureStateReport = () => {
+    try {
+      const text = generateFutureStateReportText();
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const company = currentAnalysis?.analysis.companyInfo.companyName?.trim().replace(/[^a-z0-9]+/gi, '_') || 'company';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `FutureState_${company}_${timestamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download future state report', e);
+      alert('Failed to generate report. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -306,13 +396,23 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
               </button>
               
               {currentStep === steps.length ? (
-                <button
-                  onClick={handleComplete}
-                  className="flex items-center px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 font-semibold shadow-md"
-                >
-                  Complete Future Planning
-                  <CheckCircle2 className="w-4 h-4 ml-2" />
-                </button>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={handleComplete}
+                    className="flex items-center px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 font-semibold shadow-md"
+                  >
+                    Complete Future Planning
+                    <CheckCircle2 className="w-4 h-4 ml-2" />
+                  </button>
+                  <button
+                    onClick={downloadFutureStateReport}
+                    className="flex items-center px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold shadow-md"
+                    aria-label="Download Future State Report"
+                  >
+                    Download Report
+                    <Download className="w-4 h-4 ml-2" />
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={nextStep}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Download, Mail, RotateCcw, Building2, Target, TrendingUp, ArrowLeft } from 'lucide-react';
+import { Download, Mail, RotateCcw, Building2, Target, TrendingUp, ArrowLeft, FileText } from 'lucide-react';
 import { RealUseCase } from '../types';
 
 interface RealUseCasesPageProps {
@@ -138,6 +138,68 @@ Details: ${useCase.BP || 'No details available'}
 
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoLink);
+  };
+
+  // Build a comprehensive text export of EVERYTHING rendered on the page
+  const handleFullPageExport = () => {
+    const timestamp = new Date().toISOString();
+    const lines: string[] = [];
+    lines.push('REAL USE CASES – FULL PAGE EXPORT');
+    lines.push(`Generated: ${timestamp}`);
+    lines.push(`Total Use Cases: ${useCasesList.length}`);
+    lines.push(''.padEnd(60, '='));
+
+    const ADDITIONAL_SKIP = new Set([
+      'BP', 'Company', 'company', 'Sector', 'id', 'Real Project 1', 'Real Project 2',
+      'Real Case 1', 'Real Case 2', 'realCase1', 'realCase2', 'details', 'matchScore'
+    ]);
+
+    useCasesList.forEach((useCase, index) => {
+      lines.push(`\n#${index + 1} Company: ${useCase.Company || useCase.company || 'Unknown Company'}`);
+      if (useCase.Sector) lines.push(`Sector: ${useCase.Sector}`);
+      if (useCase.matchScore !== undefined) lines.push(`Match Score: ${useCase.matchScore}`);
+      lines.push('');
+      if (useCase.BP) {
+        lines.push('BUSINESS CASE DETAILS:');
+        lines.push(useCase.BP.trim());
+        lines.push('');
+      }
+      if (useCase['Real Project 1']) {
+        // Strip any HTML tags if present
+        const rp1 = String(useCase['Real Project 1']).replace(/<[^>]+>/g, '');
+        lines.push('REAL PROJECT IMPLEMENTATION #1:');
+        lines.push(rp1.trim());
+        lines.push('');
+      }
+      if (useCase['Real Project 2']) {
+        const rp2 = String(useCase['Real Project 2']).replace(/<[^>]+>/g, '');
+        lines.push('REAL PROJECT IMPLEMENTATION #2:');
+        lines.push(rp2.trim());
+        lines.push('');
+      }
+      // Any other remaining fields
+      Object.entries(useCase).forEach(([k, v]) => {
+        if (!ADDITIONAL_SKIP.has(k) && v) {
+          lines.push(`${k.replace(/_/g, ' ')}: ${String(v)}`);
+        }
+      });
+      lines.push('\n' + '-'.repeat(50));
+    });
+
+    // Summary section (mirrors on-page summary call-to-action)
+    lines.push('\nSUMMARY:');
+    lines.push(`You viewed ${useCasesList.length} real-world implementation example(s).`);
+    lines.push('End of Full Export');
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `real-use-cases-full-export-${timestamp.split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -325,10 +387,12 @@ Details: ${useCase.BP || 'No details available'}
           </button>
           
           <button
-            onClick={handleExport}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+            onClick={handleFullPageExport}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-sm"
+            aria-label="Download the full detailed real use cases report as a text file"
           >
-            Download Complete Report
+            <FileText className="h-5 w-5" />
+            <span>Download Full Report (TXT)</span>
           </button>
           
           <button
