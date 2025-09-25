@@ -333,6 +333,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   const downloadFullReport = () => {
     if (!generatedStrategy) return; // Only allow when a strategy is generated
     const fullText = generateFullReportText();
+    try {
+      // Persist the full text so FutureStateAnalysisWizard can build a true cumulative report
+      localStorage.setItem('ai_full_strategy_report', fullText);
+    } catch (e) {
+      console.warn('Unable to persist full strategy report to localStorage', e);
+    }
     const blob = new Blob([fullText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

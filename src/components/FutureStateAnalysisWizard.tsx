@@ -285,6 +285,152 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
     }
   };
 
+  // Attempt to load strategy report text (from dashboard) if saved in localStorage previously
+  const loadStrategyReportIfAvailable = (): string | null => {
+    try {
+      const raw = localStorage.getItem('ai_full_strategy_report');
+      return raw || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Try to reconstruct a minimal current state report from localStorage if available
+  const loadCurrentStateIfAvailable = (): { analysis?: any; scores?: any } => {
+    try {
+      const analysisRaw = localStorage.getItem('current_state_analysis');
+      const scoresRaw = localStorage.getItem('current_state_scores');
+      return {
+        analysis: analysisRaw ? JSON.parse(analysisRaw) : undefined,
+        scores: scoresRaw ? JSON.parse(scoresRaw) : undefined
+      };
+    } catch {
+      return {};
+    }
+  };
+
+  // Generate cumulative report: FULL Current State + FULL Future State + (if available) Strategy Full Report
+  const generateCumulativeReport = (): string => {
+    const lines: string[] = [];
+    const timestamp = new Date().toISOString();
+    lines.push('ENTERPRISE AI TRANSFORMATION – CONSOLIDATED REPORT');
+    lines.push(`Generated: ${timestamp}`);
+    lines.push('='.repeat(100));
+
+    // Current State Section
+    const currentSaved = loadCurrentStateIfAvailable();
+    if (currentAnalysis || currentSaved.analysis) {
+      lines.push('\n\n>>> SECTION 1: CURRENT STATE ANALYSIS (FULL)');
+      lines.push('-'.repeat(80));
+      const c = currentAnalysis?.analysis || currentSaved.analysis || {};
+      const cs = currentAnalysis?.scores || currentSaved.scores || {};
+      const safe = (v: any) => (v === undefined || v === null || v === '' ? '—' : v);
+      const pushObj = (title: string, obj: any) => {
+        lines.push(`\n-- ${title} --`);
+        Object.entries(obj || {}).forEach(([k, v]) => {
+          if (v && typeof v === 'object' && 'score' in (v as any) && 'absoluteValue' in (v as any)) {
+            const pv: any = v;
+            lines.push(`${k}: value=${safe(pv.absoluteValue)} | score=${safe(pv.score)}`);
+          } else if (v && typeof v === 'object') {
+            // nested simple object
+            lines.push(`${k}:`);
+            Object.entries(v as any).forEach(([sk, sv]) => lines.push(`  ${sk}: ${safe(sv)}`));
+          } else {
+            lines.push(`${k}: ${safe(v)}`);
+          }
+        });
+      };
+      pushObj('Company Information', c.companyInfo || {});
+      if (c.roiCalculation) {
+        const { calculatedMetrics, ...roiInputs } = c.roiCalculation;
+        pushObj('ROI Calculation Inputs', roiInputs);
+        pushObj('ROI Calculation Metrics', calculatedMetrics || {});
+      }
+      pushObj('Raw Material Process', c.rawMaterialProcess || {});
+      if (c.productionProcess) {
+        pushObj('Production Process - Stage 1', c.productionProcess.stage1 || {});
+        pushObj('Production Process - Stage 2', c.productionProcess.stage2 || {});
+      }
+      pushObj('Technology Systems', c.technologySystems || {});
+      pushObj('Workforce Skills', c.workforceSkills || {});
+      pushObj('Pain Points', c.painPoints || {});
+      pushObj('Productivity Metrics', c.productivityMetrics || {});
+      pushObj('Automation Potential', c.automationPotential || {});
+      pushObj('Data Readiness', c.dataReadiness || {});
+      pushObj('Strategic Alignment', c.strategicAlignment || {});
+      if (cs && Object.keys(cs).length) {
+        lines.push('\n-- Score Breakdown --');
+        Object.entries(cs).forEach(([k, v]) => lines.push(`${k}: ${safe(v)}`));
+      }
+    } else {
+      lines.push('\nNo Current State data available.');
+    }
+
+    // Future State Section
+    lines.push('\n\n>>> SECTION 2: FUTURE STATE ANALYSIS (FULL)');
+    lines.push('-'.repeat(80));
+    const safeF = (v: any) => (v === undefined || v === null || v === '' ? '—' : v);
+    const pushF = (title: string, obj: any) => {
+      lines.push(`\n-- ${title} --`);
+      Object.entries(obj || {}).forEach(([k, v]) => {
+        if (v && typeof v === 'object' && 'score' in (v as any) && 'absoluteValue' in (v as any)) {
+          const pv: any = v;
+          lines.push(`${k}: target=${safeF(pv.absoluteValue)} | score=${safeF(pv.score)}`);
+        } else if (v && typeof v === 'object') {
+          lines.push(`${k}:`);
+          Object.entries(v as any).forEach(([sk, sv]) => lines.push(`  ${sk}: ${safeF(sv)}`));
+        } else {
+          lines.push(`${k}: ${safeF(v)}`);
+        }
+      });
+    };
+    pushF('Company Vision & Strategy', formData.companyVision);
+    pushF('Process Improvement', formData.processImprovement);
+    pushF('Technology Roadmap', formData.technologyRoadmap);
+    pushF('Future Workforce', formData.futureWorkforce);
+    pushF('Business Impact Targets', formData.businessImpact);
+    pushF('Future Productivity & Performance', formData.futureProductivity);
+    pushF('Implementation Strategy', formData.implementationStrategy);
+    pushF('Investment Planning', formData.investmentPlanning);
+    pushF('Risk Management', formData.riskManagement);
+    lines.push('\n-- Score Breakdown --');
+    Object.entries(scores).forEach(([k, v]) => lines.push(`${k}: ${safeF(v)}`));
+
+    // Strategy Report (if available)
+    const strategyText = loadStrategyReportIfAvailable();
+  lines.push('\n\n>>> SECTION 3: AI STRATEGY & IMPLEMENTATION REPORT (FULL)');
+    lines.push('-'.repeat(80));
+    if (strategyText) {
+      lines.push('(Full strategy report appended below)');
+      lines.push(strategyText);
+    } else {
+      lines.push('No full strategy report found in this session. Generate strategy in dashboard to include it.');
+    }
+
+    lines.push('\nEND OF CONSOLIDATED REPORT');
+    return lines.join('\n');
+  };
+
+  const downloadCumulativeReport = () => {
+    try {
+      const text = generateCumulativeReport();
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const company = currentAnalysis?.analysis.companyInfo.companyName?.trim().replace(/[^a-z0-9]+/gi, '_') || 'company';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `AI_Consolidated_Report_${company}_${timestamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download consolidated report', e);
+      alert('Failed to generate consolidated report.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -396,7 +542,7 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
               </button>
               
               {currentStep === steps.length ? (
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
                   <button
                     onClick={handleComplete}
                     className="flex items-center px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 font-semibold shadow-md"
@@ -409,7 +555,15 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
                     className="flex items-center px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold shadow-md"
                     aria-label="Download Future State Report"
                   >
-                    Download Report
+                    Future State Report
+                    <Download className="w-4 h-4 ml-2" />
+                  </button>
+                  <button
+                    onClick={downloadCumulativeReport}
+                    className="flex items-center px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow-md"
+                    aria-label="Download Consolidated AI Transformation Report"
+                  >
+                    All Reports (Combined)
                     <Download className="w-4 h-4 ml-2" />
                   </button>
                 </div>
