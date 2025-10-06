@@ -11,7 +11,6 @@ import FutureStep5BusinessImpact from './futureSteps/FutureStep5BusinessImpact';
 import FutureStep6Productivity from './futureSteps/FutureStep6Productivity';
 import FutureStep7Implementation from './futureSteps/FutureStep7Implementation';
 import FutureStep8Investment from './futureSteps/FutureStep8Investment';
-import AIROICalculator from './AIROICalculator';
 import FutureStep9Risk from './futureSteps/FutureStep9Risk';
 import FutureStep10Review from './futureSteps/FutureStep10Review';
 
@@ -23,7 +22,6 @@ interface FutureStateAnalysisProps {
 
 const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onComplete, currentAnalysis, onNavigateToTab }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [showROICalculator, setShowROICalculator] = useState(false);
   const [formData, setFormData] = useState<FutureStateAnalysis>({
     companyVision: {
       visionStatement: '',
@@ -513,20 +511,11 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
             {/* Step Content */}
             <div className="bg-white rounded-lg shadow-lg p-8 mb-8 border border-purple-100">
               {StepComponent && (
-                currentStep === 8 ? (
-                  <StepComponent
-                    data={formData}
-                    updateData={updateFormData}
-                    scores={scores}
-                    onOpenROICalculator={() => setShowROICalculator(true)}
-                  />
-                ) : (
-                  <StepComponent
-                    data={formData}
-                    updateData={updateFormData}
-                    scores={scores}
-                  />
-                )
+                <StepComponent
+                  data={formData}
+                  updateData={updateFormData}
+                  scores={scores}
+                />
               )}
             </div>
 
@@ -586,29 +575,7 @@ const FutureStateAnalysisWizard: React.FC<FutureStateAnalysisProps> = ({ onCompl
         </div>
       </div>
 
-      {/* ROI Calculator Modal */}
-      {showROICalculator && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">AI ROI Calculator</h2>
-              <button
-                onClick={() => setShowROICalculator(false)}
-                className="text-gray-500 hover:text-gray-700 text-xl font-bold"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-6">
-              <AIROICalculator
-                onClose={() => setShowROICalculator(false)}
-                futureAnalysis={{ analysis: formData, scores }}
-                currentAnalysis={currentAnalysis}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 };

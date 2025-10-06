@@ -1,7 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, DollarSign, TrendingUp, Clock, Target, BarChart3, PieChart, Gauge, X, Download } from 'lucide-react';
-import { CurrentStateAnalysis, ScoreBreakdown } from '../types/currentStateAnalysis';
-import { FutureStateAnalysis, FutureScoreBreakdown } from '../types/futureStateAnalysis';
+import { X, Calculator, Download, TrendingUp, BarChart3, PieChart } from 'lucide-react';
+
+// Define missing types locally
+interface CurrentStateAnalysis {
+  companyInfo: {
+    companyName: string;
+    processName: string;
+    subProcessName: string;
+    numberOfEmployees: number;
+    numberOfShifts: number;
+  };
+}
+
+interface FutureStateAnalysis {
+  // Add any future state analysis properties as needed
+}
+
+interface ScoreBreakdown {
+  total: number;
+  outcome: string;
+  technologySystems: number;
+  automationPotential: number;
+  productivityMetrics: number;
+}
+
+interface FutureScoreBreakdown {
+  total: number;
+  outcome: string;
+  technologyRoadmap: number;
+  businessImpact: number;
+  implementationStrategy: number;
+  investmentPlanning: number;
+}
 
 interface AIROICalculatorProps {
   onClose: () => void;
@@ -10,32 +40,37 @@ interface AIROICalculatorProps {
 }
 
 interface ROIMetrics {
-  newTimePerInstance: number;
-  timeSavedPerMonth: number;
-  laborCostSavings: number;
+  costReductionSavings: number;
+  qualityImprovementSavings: number;
+  efficiencyImprovementEarnings: number;
   totalMonthlyGain: number;
   totalAnnualGain: number;
   paybackPeriod: number;
   roiPercentage: number;
 }
 
-const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnalysis, futureAnalysis }) => {
-  // User inputs for process analysis
-  const [totalEffortPerMonth, setTotalEffortPerMonth] = useState<number>(160);
-  const [currentProcessCost, setCurrentProcessCost] = useState<number>(600000);
-  const [timePerInstanceBefore, setTimePerInstanceBefore] = useState<number>(120);
-  const [timePerInstanceAfter, setTimePerInstanceAfter] = useState<number>(30);
-  const [effortAfterAutomation, setEffortAfterAutomation] = useState<number>(60);
-  const [costAfterAutomation, setCostAfterAutomation] = useState<number>(200000);
+interface ROIInputs {
+  costReduction: { current: number; future: number; };
+  qualityDefects: { current: number; future: number; };
+  efficiencyImprovement: { current: number; future: number; };
+  initialInvestment: number;
+}
 
-  // User inputs for financial analysis
-  const [revenueImpact, setRevenueImpact] = useState<number>(0);
-  const [capex, setCapex] = useState<number>(0);
+const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnalysis, futureAnalysis }) => {
+  // New ROI input structure
+  const [roiInputs, setROIInputs] = useState<ROIInputs>({
+    costReduction: { current: 100000, future: 80000 },
+    qualityDefects: { current: 50000, future: 20000 },
+    efficiencyImprovement: { current: 80, future: 95 },
+    initialInvestment: 500000
+  });
+
+  const [showVisualization, setShowVisualization] = useState(false);
 
   const [metrics, setMetrics] = useState<ROIMetrics>({
-    newTimePerInstance: 0,
-    timeSavedPerMonth: 0,
-    laborCostSavings: 0,
+    costReductionSavings: 0,
+    qualityImprovementSavings: 0,
+    efficiencyImprovementEarnings: 0,
     totalMonthlyGain: 0,
     totalAnnualGain: 0,
     paybackPeriod: 0,
@@ -44,24 +79,27 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
 
   // Calculate metrics whenever inputs change
   useEffect(() => {
-    const newTimePerInstance = timePerInstanceBefore - timePerInstanceAfter;
-    const timeSavedPerMonth = totalEffortPerMonth - effortAfterAutomation;
-    const laborCostSavings = currentProcessCost - costAfterAutomation;
-    const totalMonthlyGain = laborCostSavings + revenueImpact;
+    const costReductionSavings = roiInputs.costReduction.current - roiInputs.costReduction.future;
+    const qualityImprovementSavings = roiInputs.qualityDefects.current - roiInputs.qualityDefects.future;
+    // Efficiency improvement earnings = percentage improvement * base revenue estimate
+    const efficiencyGainPercent = ((roiInputs.efficiencyImprovement.future - roiInputs.efficiencyImprovement.current) / roiInputs.efficiencyImprovement.current) * 100;
+    const efficiencyImprovementEarnings = (efficiencyGainPercent / 100) * 100000; // Assume 100k base revenue
+    
+    const totalMonthlyGain = costReductionSavings + qualityImprovementSavings + efficiencyImprovementEarnings;
     const totalAnnualGain = totalMonthlyGain * 12;
-    const paybackPeriod = capex > 0 && totalMonthlyGain > 0 ? capex / totalMonthlyGain : 0;
-    const roiPercentage = capex > 0 ? ((totalAnnualGain - capex) / capex) * 100 : 0;
+    const paybackPeriod = roiInputs.initialInvestment > 0 && totalMonthlyGain > 0 ? roiInputs.initialInvestment / totalMonthlyGain : 0;
+    const roiPercentage = roiInputs.initialInvestment > 0 ? ((totalAnnualGain - roiInputs.initialInvestment) / roiInputs.initialInvestment) * 100 : 0;
 
     setMetrics({
-      newTimePerInstance,
-      timeSavedPerMonth,
-      laborCostSavings,
+      costReductionSavings,
+      qualityImprovementSavings,
+      efficiencyImprovementEarnings,
       totalMonthlyGain,
       totalAnnualGain,
       paybackPeriod,
       roiPercentage,
     });
-  }, [revenueImpact, capex, totalEffortPerMonth, currentProcessCost, timePerInstanceBefore, timePerInstanceAfter, effortAfterAutomation, costAfterAutomation]);
+  }, [roiInputs]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -69,6 +107,20 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
       currency: 'INR',
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  const updateROIInput = (category: keyof ROIInputs, field?: 'current' | 'future', value?: number) => {
+    if (category === 'initialInvestment' && value !== undefined) {
+      setROIInputs(prev => ({ ...prev, initialInvestment: value }));
+    } else if (field && value !== undefined && category !== 'initialInvestment') {
+      setROIInputs(prev => ({
+        ...prev,
+        [category]: { 
+          ...prev[category as Exclude<keyof ROIInputs, 'initialInvestment'>], 
+          [field]: value 
+        }
+      }));
+    }
   };
 
   const generateComprehensiveReport = () => {
@@ -100,28 +152,25 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
         investmentPlanning: futureAnalysis.scores.investmentPlanning
       } : null,
       roiCalculation: {
-        processInputs: {
-          totalEffortPerMonth,
-          currentProcessCost: formatCurrency(currentProcessCost),
-          timePerInstanceBefore,
-          timePerInstanceAfter,
-          effortAfterAutomation,
-          costAfterAutomation: formatCurrency(costAfterAutomation)
-        },
-        financialInputs: {
-          revenueImpact: formatCurrency(revenueImpact),
-          capexInvestment: formatCurrency(capex)
+        roiInputs: {
+          costReductionCurrent: formatCurrency(roiInputs.costReduction.current),
+          costReductionFuture: formatCurrency(roiInputs.costReduction.future),
+          qualityDefectsCurrent: formatCurrency(roiInputs.qualityDefects.current),
+          qualityDefectsFuture: formatCurrency(roiInputs.qualityDefects.future),
+          efficiencyCurrentPercent: `${roiInputs.efficiencyImprovement.current}%`,
+          efficiencyFuturePercent: `${roiInputs.efficiencyImprovement.future}%`,
+          initialInvestment: formatCurrency(roiInputs.initialInvestment)
         },
         calculatedMetrics: {
-          newTimePerInstance: metrics.newTimePerInstance,
-          timeSavedPerMonth: metrics.timeSavedPerMonth,
-          laborCostSavings: formatCurrency(metrics.laborCostSavings),
+          costReductionSavings: formatCurrency(metrics.costReductionSavings),
+          qualityImprovementSavings: formatCurrency(metrics.qualityImprovementSavings),
+          efficiencyImprovementEarnings: formatCurrency(metrics.efficiencyImprovementEarnings),
           totalMonthlyGain: formatCurrency(metrics.totalMonthlyGain),
           totalAnnualGain: formatCurrency(metrics.totalAnnualGain),
           paybackPeriod: `${metrics.paybackPeriod.toFixed(1)} months`,
           roiPercentage: `${metrics.roiPercentage.toFixed(0)}%`
         },
-        executiveSummary: `Based on the analysis, this AI project has an ROI of ${metrics.roiPercentage.toFixed(0)}% and will pay for itself in ${metrics.paybackPeriod.toFixed(1)} months. The total financial gain is projected to be ${formatCurrency(metrics.totalAnnualGain)} per year, driven by ${formatCurrency(metrics.laborCostSavings)} in monthly cost reductions and ${formatCurrency(revenueImpact)} in new revenue.`
+        executiveSummary: `Based on the analysis, this AI project has an ROI of ${metrics.roiPercentage.toFixed(0)}% and will pay for itself in ${metrics.paybackPeriod.toFixed(1)} months. The total financial gain is projected to be ${formatCurrency(metrics.totalAnnualGain)} per year, driven by ${formatCurrency(metrics.costReductionSavings)} in cost reduction savings, ${formatCurrency(metrics.qualityImprovementSavings)} in quality improvement savings, and ${formatCurrency(metrics.efficiencyImprovementEarnings)} in efficiency improvement earnings.`
       }
     };
 
@@ -193,24 +242,25 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
     <div class="section">
         <h2>ROI Analysis</h2>
         
-        <h3>Process Inputs</h3>
+        <h3>ROI Inputs</h3>
         <table>
-            <tr><th>Metric</th><th>Value</th></tr>
-            <tr><td>Total Effort per Month</td><td>${report.roiCalculation.processInputs.totalEffortPerMonth} hours</td></tr>
-            <tr><td>Current Process Cost</td><td>${report.roiCalculation.processInputs.currentProcessCost}</td></tr>
-            <tr><td>Time per Instance (Before)</td><td>${report.roiCalculation.processInputs.timePerInstanceBefore} minutes</td></tr>
-            <tr><td>Time per Instance (After)</td><td>${report.roiCalculation.processInputs.timePerInstanceAfter} minutes</td></tr>
-            <tr><td>Effort After Automation</td><td>${report.roiCalculation.processInputs.effortAfterAutomation} hours/month</td></tr>
-            <tr><td>Cost After Automation</td><td>${report.roiCalculation.processInputs.costAfterAutomation}</td></tr>
+            <tr><th>Metric</th><th>Current</th><th>Future</th></tr>
+            <tr><td>Cost Reduction</td><td>${report.roiCalculation.roiInputs.costReductionCurrent}</td><td>${report.roiCalculation.roiInputs.costReductionFuture}</td></tr>
+            <tr><td>Quality Defects</td><td>${report.roiCalculation.roiInputs.qualityDefectsCurrent}</td><td>${report.roiCalculation.roiInputs.qualityDefectsFuture}</td></tr>
+            <tr><td>Efficiency Improvement</td><td>${report.roiCalculation.roiInputs.efficiencyCurrentPercent}</td><td>${report.roiCalculation.roiInputs.efficiencyFuturePercent}</td></tr>
+            <tr><td>Initial Investment</td><td colspan="2">${report.roiCalculation.roiInputs.initialInvestment}</td></tr>
         </table>
         
         <h3>Financial Results</h3>
         <table>
             <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Cost Reduction Savings</td><td>${report.roiCalculation.calculatedMetrics.costReductionSavings}</td></tr>
+            <tr><td>Quality Improvement Savings</td><td>${report.roiCalculation.calculatedMetrics.qualityImprovementSavings}</td></tr>
+            <tr><td>Efficiency Improvement Earnings</td><td>${report.roiCalculation.calculatedMetrics.efficiencyImprovementEarnings}</td></tr>
+            <tr><td>Total Monthly Gain</td><td>${report.roiCalculation.calculatedMetrics.totalMonthlyGain}</td></tr>
+            <tr><td>Total Annual Gain</td><td>${report.roiCalculation.calculatedMetrics.totalAnnualGain}</td></tr>
             <tr><td>ROI</td><td>${report.roiCalculation.calculatedMetrics.roiPercentage}</td></tr>
             <tr><td>Payback Period</td><td>${report.roiCalculation.calculatedMetrics.paybackPeriod}</td></tr>
-            <tr><td>Annual Financial Gain</td><td>${report.roiCalculation.calculatedMetrics.totalAnnualGain}</td></tr>
-            <tr><td>Monthly Time Saved</td><td>${report.roiCalculation.calculatedMetrics.timeSavedPerMonth} hours</td></tr>
         </table>
         
         <div class="highlight">
@@ -233,13 +283,73 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
     URL.revokeObjectURL(printUrl);
   };
 
-  const getROICategory = (roi: number) => {
-    if (roi >= 150) return { category: 'Gold', color: 'text-yellow-600' };
-    if (roi >= 51) return { category: 'Silver', color: 'text-gray-600' };
-    return { category: 'Bronze', color: 'text-orange-600' };
+  // Generate CSV data for download
+  const generateCSVData = () => {
+    const csvRows = [
+      // Headers
+      ['Metric', 'Current', 'Future', 'Savings/Earnings', 'Category'],
+      
+      // ROI Inputs
+      ['Cost Reduction', roiInputs.costReduction.current, roiInputs.costReduction.future, metrics.costReductionSavings, 'ROI Inputs'],
+      ['Quality Defects', roiInputs.qualityDefects.current, roiInputs.qualityDefects.future, metrics.qualityImprovementSavings, 'ROI Inputs'],
+      ['Efficiency Improvement (%)', roiInputs.efficiencyImprovement.current, roiInputs.efficiencyImprovement.future, metrics.efficiencyImprovementEarnings, 'ROI Inputs'],
+      ['Initial Investment', roiInputs.initialInvestment, '', '', 'ROI Inputs'],
+      
+      // Summary metrics
+      ['', '', '', '', ''],
+      ['Total Monthly Gain', '', '', metrics.totalMonthlyGain, 'Summary'],
+      ['Total Annual Gain', '', '', metrics.totalAnnualGain, 'Summary'],
+      ['Payback Period (months)', '', '', metrics.paybackPeriod.toFixed(1), 'Summary'],
+      ['ROI Percentage', '', '', `${metrics.roiPercentage.toFixed(1)}%`, 'Summary'],
+    ];
+
+    // Add Current State Analysis if available
+    if (currentAnalysis) {
+      csvRows.push(['', '', ''], ['Current State Analysis', '', '']);
+      csvRows.push(['Total Score', `${currentAnalysis.scores.total}/300`, 'Current State']);
+      csvRows.push(['Outcome', currentAnalysis.scores.outcome, 'Current State']);
+      csvRows.push(['Company Name', currentAnalysis.analysis.companyInfo.companyName, 'Current State']);
+      csvRows.push(['Process Name', currentAnalysis.analysis.companyInfo.processName, 'Current State']);
+      csvRows.push(['Sub-Process Name', currentAnalysis.analysis.companyInfo.subProcessName, 'Current State']);
+      csvRows.push(['Number of Employees', currentAnalysis.analysis.companyInfo.numberOfEmployees, 'Current State']);
+      csvRows.push(['Technology Systems Score', currentAnalysis.scores.technologySystems, 'Current State']);
+      csvRows.push(['Automation Potential Score', currentAnalysis.scores.automationPotential, 'Current State']);
+    }
+
+    // Add Future State Analysis if available
+    if (futureAnalysis) {
+      csvRows.push(['', '', ''], ['Future State Analysis', '', '']);
+      csvRows.push(['Total Score', `${futureAnalysis.scores.total}/302`, 'Future State']);
+      csvRows.push(['Outcome', futureAnalysis.scores.outcome, 'Future State']);
+      csvRows.push(['Technology Roadmap Score', futureAnalysis.scores.technologyRoadmap, 'Future State']);
+      csvRows.push(['Business Impact Score', futureAnalysis.scores.businessImpact, 'Future State']);
+      csvRows.push(['Implementation Strategy Score', futureAnalysis.scores.implementationStrategy, 'Future State']);
+    }
+
+    return csvRows;
   };
 
-  const roiCategory = getROICategory(metrics.roiPercentage);
+  const downloadCSV = () => {
+    try {
+      const csvData = generateCSVData();
+      const csvContent = csvData.map(row => 
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `AI_ROI_Analysis_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download CSV', e);
+      alert('Failed to generate CSV. Please try again.');
+    }
+  };
 
   return (
     <div 
@@ -274,130 +384,164 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
             {/* Left Panel - Inputs */}
             <div className="space-y-6">
-              {/* Process Analysis Inputs */}
+              {/* Cost Reduction Analysis */}
               <div className="bg-white rounded-lg p-6 shadow-lg border">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Target className="w-5 h-5 mr-2 text-blue-600" />
-                  Process Analysis Inputs
+                  <TrendingUp className="w-5 h-5 mr-2 text-red-600" />
+                  Cost Reduction Analysis
                 </h3>
                 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Total Effort Spent per Month (hours)
-                      </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Current Monthly Cost (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-3 text-gray-500">₹</span>
                       <input
                         type="number"
-                        value={totalEffortPerMonth}
-                        onChange={(e) => setTotalEffortPerMonth(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="160"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Current Process Cost (₹/month)
-                      </label>
-                      <input
-                        type="number"
-                        value={currentProcessCost}
-                        onChange={(e) => setCurrentProcessCost(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="600000"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Time per Instance Before (minutes)
-                      </label>
-                      <input
-                        type="number"
-                        value={timePerInstanceBefore}
-                        onChange={(e) => setTimePerInstanceBefore(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="120"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Time per Instance After (minutes)
-                      </label>
-                      <input
-                        type="number"
-                        value={timePerInstanceAfter}
-                        onChange={(e) => setTimePerInstanceAfter(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="30"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Effort After Automation (hours/month)
-                      </label>
-                      <input
-                        type="number"
-                        value={effortAfterAutomation}
-                        onChange={(e) => setEffortAfterAutomation(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="60"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cost After Automation (₹/month)
-                      </label>
-                      <input
-                        type="number"
-                        value={costAfterAutomation}
-                        onChange={(e) => setCostAfterAutomation(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="200000"
+                        value={roiInputs.costReduction.current}
+                        onChange={(e) => updateROIInput('costReduction', 'current', Number(e.target.value))}
+                        className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Future Monthly Cost (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-3 text-gray-500">₹</span>
+                      <input
+                        type="number"
+                        value={roiInputs.costReduction.future}
+                        onChange={(e) => updateROIInput('costReduction', 'future', Number(e.target.value))}
+                        className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                  <p className="text-sm text-red-700">
+                    <strong>Monthly Savings:</strong> {formatCurrency(metrics.costReductionSavings)}
+                  </p>
+                </div>
               </div>
 
-              {/* Financial Inputs */}
+              {/* Quality Defects Analysis */}
               <div className="bg-white rounded-lg p-6 shadow-lg border">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <DollarSign className="w-5 h-5 mr-2 text-green-600" />
-                  Financial Inputs
+                  <Calculator className="w-5 h-5 mr-2 text-yellow-600" />
+                  Quality Defects Analysis
                 </h3>
                 
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Revenue Impact (₹/month)
+                      Current Defect Cost/Month (₹)
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-3 text-gray-500">₹</span>
                       <input
                         type="number"
-                        value={revenueImpact}
-                        onChange={(e) => setRevenueImpact(Number(e.target.value))}
+                        value={roiInputs.qualityDefects.current}
+                        onChange={(e) => updateROIInput('qualityDefects', 'current', Number(e.target.value))}
                         className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="0"
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Additional revenue generated per month due to AI</p>
                   </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Future Defect Cost/Month (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-3 text-gray-500">₹</span>
+                      <input
+                        type="number"
+                        value={roiInputs.qualityDefects.future}
+                        onChange={(e) => updateROIInput('qualityDefects', 'future', Number(e.target.value))}
+                        className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+                  <p className="text-sm text-yellow-700">
+                    <strong>Monthly Quality Savings:</strong> {formatCurrency(metrics.qualityImprovementSavings)}
+                  </p>
+                </div>
+              </div>
 
+              {/* Efficiency Improvement Analysis */}
+              <div className="bg-white rounded-lg p-6 shadow-lg border">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <BarChart3 className="w-5 h-5 mr-2 text-green-600" />
+                  Efficiency Improvement Analysis
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      One-Time Investment / CAPEX (₹)
+                      Current Efficiency (%)
                     </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-3 text-gray-500">₹</span>
-                      <input
-                        type="number"
-                        value={capex}
-                        onChange={(e) => setCapex(Number(e.target.value))}
-                        className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="0"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Total one-time cost for AI implementation</p>
+                    <input
+                      type="number"
+                      value={roiInputs.efficiencyImprovement.current}
+                      onChange={(e) => updateROIInput('efficiencyImprovement', 'current', Number(e.target.value))}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="0"
+                      max="100"
+                    />
                   </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Future Efficiency (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={roiInputs.efficiencyImprovement.future}
+                      onChange={(e) => updateROIInput('efficiencyImprovement', 'future', Number(e.target.value))}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm text-green-700">
+                    <strong>Monthly Efficiency Earnings:</strong> {formatCurrency(metrics.efficiencyImprovementEarnings)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Initial Investment */}
+              <div className="bg-white rounded-lg p-6 shadow-lg border">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Download className="w-5 h-5 mr-2 text-purple-600" />
+                  Initial Investment
+                </h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    One-Time Investment / CAPEX (₹)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-gray-500">₹</span>
+                    <input
+                      type="number"
+                      value={roiInputs.initialInvestment}
+                      onChange={(e) => updateROIInput('initialInvestment', undefined, Number(e.target.value))}
+                      className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="500000"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Total one-time cost for AI implementation</p>
                 </div>
               </div>
             </div>
@@ -406,45 +550,322 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
             <div className="space-y-6">
               {/* KPI Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-3 sm:p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-red-100 text-xs sm:text-sm">Cost Reduction</p>
+                      <p className="text-lg sm:text-xl font-bold">{formatCurrency(metrics.costReductionSavings)}</p>
+                    </div>
+                    <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-red-200" />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-3 sm:p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-yellow-100 text-xs sm:text-sm">Quality Savings</p>
+                      <p className="text-lg sm:text-xl font-bold">{formatCurrency(metrics.qualityImprovementSavings)}</p>
+                    </div>
+                    <Calculator className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-200" />
+                  </div>
+                </div>
+
                 <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-3 sm:p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-green-100 text-xs sm:text-sm">ROI</p>
-                      <p className="text-lg sm:text-2xl font-bold">{metrics.roiPercentage.toFixed(0)}%</p>
+                      <p className="text-green-100 text-xs sm:text-sm">Efficiency Earnings</p>
+                      <p className="text-sm sm:text-lg font-bold">{formatCurrency(metrics.efficiencyImprovementEarnings)}</p>
                     </div>
-                    <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-200" />
+                    <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-green-200" />
                   </div>
                 </div>
 
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-3 sm:p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-blue-100 text-xs sm:text-sm">Payback Period</p>
-                      <p className="text-lg sm:text-2xl font-bold">{metrics.paybackPeriod.toFixed(1)} Months</p>
+                      <p className="text-blue-100 text-xs sm:text-sm">ROI</p>
+                      <p className="text-lg sm:text-2xl font-bold">{metrics.roiPercentage.toFixed(0)}%</p>
                     </div>
-                    <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-blue-200" />
+                    <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-blue-200" />
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-3 sm:p-4 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100 text-xs sm:text-sm">Annual Gain</p>
-                      <p className="text-sm sm:text-xl font-bold">{formatCurrency(metrics.totalAnnualGain)}</p>
-                    </div>
-                    <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-purple-200" />
-                  </div>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                  <h4 className="text-sm font-semibold text-gray-600 mb-1">Payback Period</h4>
+                  <p className="text-2xl font-bold text-gray-900">{metrics.paybackPeriod.toFixed(1)} Months</p>
                 </div>
+                
+                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                  <h4 className="text-sm font-semibold text-gray-600 mb-1">Total Annual Gain</h4>
+                  <p className="text-xl font-bold text-gray-900">{formatCurrency(metrics.totalAnnualGain)}</p>
+                </div>
+              </div>
 
-                <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-3 sm:p-4 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-100 text-xs sm:text-sm">Time Saved</p>
-                      <p className="text-lg sm:text-2xl font-bold">{metrics.timeSavedPerMonth} Hrs</p>
+              {/* Visualization Button */}
+              <div className="bg-white rounded-lg p-6 shadow-lg border">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <PieChart className="w-5 h-5 mr-2 text-indigo-600" />
+                  Data Visualization
+                </h3>
+                
+                <button
+                  onClick={() => setShowVisualization(!showVisualization)}
+                  className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors font-semibold"
+                >
+                  <BarChart3 className="w-5 h-5 mr-2" />
+                  {showVisualization ? 'Hide Charts' : 'Show Visual Charts'}
+                </button>
+
+                {showVisualization && (
+                  <div className="mt-6 space-y-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
+                      Interactive ROI Analysis Charts
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Cost Reduction Chart */}
+                      <div className="bg-white rounded-lg p-4 shadow-md border">
+                        <h5 className="text-md font-semibold text-gray-900 mb-3 text-center">Cost Reduction Over Time</h5>
+                        <div className="relative h-48">
+                          <svg className="w-full h-full" viewBox="0 0 400 200">
+                            {/* Grid lines */}
+                            <defs>
+                              <pattern id="grid" width="40" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
+                              </pattern>
+                            </defs>
+                            <rect width="400" height="200" fill="url(#grid)" />
+                            
+                            {/* Axes */}
+                            <line x1="50" y1="180" x2="380" y2="180" stroke="#374151" strokeWidth="2"/>
+                            <line x1="50" y1="180" x2="50" y2="20" stroke="#374151" strokeWidth="2"/>
+                            
+                            {/* Current to Future Cost Line */}
+                            <line 
+                              x1="80" 
+                              y1={180 - (roiInputs.costReduction.current / Math.max(roiInputs.costReduction.current, 1000) * 140)} 
+                              x2="320" 
+                              y2={180 - (roiInputs.costReduction.future / Math.max(roiInputs.costReduction.current, 1000) * 140)} 
+                              stroke="#ef4444" 
+                              strokeWidth="4"
+                              strokeDasharray="0"
+                            />
+                            
+                            {/* Data points */}
+                            <circle 
+                              cx="80" 
+                              cy={180 - (roiInputs.costReduction.current / Math.max(roiInputs.costReduction.current, 1000) * 140)} 
+                              r="8" 
+                              fill="#ef4444"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            <circle 
+                              cx="320" 
+                              cy={180 - (roiInputs.costReduction.future / Math.max(roiInputs.costReduction.current, 1000) * 140)} 
+                              r="8" 
+                              fill="#ef4444"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            
+                            {/* Value labels on points */}
+                            <text x="80" y={170 - (roiInputs.costReduction.current / Math.max(roiInputs.costReduction.current, 1000) * 140)} textAnchor="middle" className="text-xs fill-red-600 font-semibold">₹{(roiInputs.costReduction.current/1000).toFixed(0)}K</text>
+                            <text x="320" y={170 - (roiInputs.costReduction.future / Math.max(roiInputs.costReduction.current, 1000) * 140)} textAnchor="middle" className="text-xs fill-red-600 font-semibold">₹{(roiInputs.costReduction.future/1000).toFixed(0)}K</text>
+                            
+                            {/* Labels */}
+                            <text x="80" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Current</text>
+                            <text x="320" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Future</text>
+                            <text x="25" y="100" textAnchor="middle" className="text-xs fill-gray-600" transform="rotate(-90 25 100)">Monthly Cost (₹)</text>
+                          </svg>
+                          <div className="absolute top-2 right-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
+                            Savings: {formatCurrency(metrics.costReductionSavings)}/mo
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quality Improvement Chart */}
+                      <div className="bg-white rounded-lg p-4 shadow-md border">
+                        <h5 className="text-md font-semibold text-gray-900 mb-3 text-center">Quality Defects Reduction</h5>
+                        <div className="relative h-48">
+                          <svg className="w-full h-full" viewBox="0 0 400 200">
+                            <rect width="400" height="200" fill="url(#grid)" />
+                            
+                            {/* Axes */}
+                            <line x1="50" y1="180" x2="380" y2="180" stroke="#374151" strokeWidth="2"/>
+                            <line x1="50" y1="180" x2="50" y2="20" stroke="#374151" strokeWidth="2"/>
+                            
+                            {/* Quality Improvement Line */}
+                            <line 
+                              x1="80" 
+                              y1={180 - (roiInputs.qualityDefects.current / Math.max(roiInputs.qualityDefects.current, 100) * 140)} 
+                              x2="320" 
+                              y2={180 - (roiInputs.qualityDefects.future / Math.max(roiInputs.qualityDefects.current, 100) * 140)} 
+                              stroke="#eab308" 
+                              strokeWidth="4"
+                            />
+                            
+                            {/* Data points */}
+                            <circle 
+                              cx="80" 
+                              cy={180 - (roiInputs.qualityDefects.current / Math.max(roiInputs.qualityDefects.current, 100) * 140)} 
+                              r="8" 
+                              fill="#eab308"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            <circle 
+                              cx="320" 
+                              cy={180 - (roiInputs.qualityDefects.future / Math.max(roiInputs.qualityDefects.current, 100) * 140)} 
+                              r="8" 
+                              fill="#eab308"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            
+                            {/* Value labels */}
+                            <text x="80" y={170 - (roiInputs.qualityDefects.current / Math.max(roiInputs.qualityDefects.current, 100) * 140)} textAnchor="middle" className="text-xs fill-yellow-600 font-semibold">{roiInputs.qualityDefects.current}</text>
+                            <text x="320" y={170 - (roiInputs.qualityDefects.future / Math.max(roiInputs.qualityDefects.current, 100) * 140)} textAnchor="middle" className="text-xs fill-yellow-600 font-semibold">{roiInputs.qualityDefects.future}</text>
+                            
+                            {/* Labels */}
+                            <text x="80" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Current</text>
+                            <text x="320" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Future</text>
+                            <text x="25" y="100" textAnchor="middle" className="text-xs fill-gray-600" transform="rotate(-90 25 100)">Defects Count</text>
+                          </svg>
+                          <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
+                            Savings: {formatCurrency(metrics.qualityImprovementSavings)}/mo
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Efficiency Improvement Chart */}
+                      <div className="bg-white rounded-lg p-4 shadow-md border">
+                        <h5 className="text-md font-semibold text-gray-900 mb-3 text-center">Efficiency Improvement</h5>
+                        <div className="relative h-48">
+                          <svg className="w-full h-full" viewBox="0 0 400 200">
+                            <rect width="400" height="200" fill="url(#grid)" />
+                            
+                            {/* Axes */}
+                            <line x1="50" y1="180" x2="380" y2="180" stroke="#374151" strokeWidth="2"/>
+                            <line x1="50" y1="180" x2="50" y2="20" stroke="#374151" strokeWidth="2"/>
+                            
+                            {/* Efficiency Line */}
+                            <line 
+                              x1="80" 
+                              y1={180 - (roiInputs.efficiencyImprovement.current / Math.max(roiInputs.efficiencyImprovement.future, roiInputs.efficiencyImprovement.current) * 140)} 
+                              x2="320" 
+                              y2={180 - (roiInputs.efficiencyImprovement.future / Math.max(roiInputs.efficiencyImprovement.future, roiInputs.efficiencyImprovement.current) * 140)} 
+                              stroke="#22c55e" 
+                              strokeWidth="4"
+                            />
+                            
+                            {/* Data points */}
+                            <circle 
+                              cx="80" 
+                              cy={180 - (roiInputs.efficiencyImprovement.current / Math.max(roiInputs.efficiencyImprovement.future, roiInputs.efficiencyImprovement.current) * 140)} 
+                              r="8" 
+                              fill="#22c55e"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            <circle 
+                              cx="320" 
+                              cy={180 - (roiInputs.efficiencyImprovement.future / Math.max(roiInputs.efficiencyImprovement.future, roiInputs.efficiencyImprovement.current) * 140)} 
+                              r="8" 
+                              fill="#22c55e"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            
+                            {/* Value labels */}
+                            <text x="80" y={170 - (roiInputs.efficiencyImprovement.current / Math.max(roiInputs.efficiencyImprovement.future, roiInputs.efficiencyImprovement.current) * 140)} textAnchor="middle" className="text-xs fill-green-600 font-semibold">{roiInputs.efficiencyImprovement.current}%</text>
+                            <text x="320" y={170 - (roiInputs.efficiencyImprovement.future / Math.max(roiInputs.efficiencyImprovement.future, roiInputs.efficiencyImprovement.current) * 140)} textAnchor="middle" className="text-xs fill-green-600 font-semibold">{roiInputs.efficiencyImprovement.future}%</text>
+                            
+                            {/* Labels */}
+                            <text x="80" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Current</text>
+                            <text x="320" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Future</text>
+                            <text x="25" y="100" textAnchor="middle" className="text-xs fill-gray-600" transform="rotate(-90 25 100)">Efficiency (%)</text>
+                          </svg>
+                          <div className="absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                            Earnings: {formatCurrency(metrics.efficiencyImprovementEarnings)}/mo
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ROI Timeline Chart */}
+                      <div className="bg-white rounded-lg p-4 shadow-md border">
+                        <h5 className="text-md font-semibold text-gray-900 mb-3 text-center">ROI Growth Timeline</h5>
+                        <div className="relative h-48">
+                          <svg className="w-full h-full" viewBox="0 0 400 200">
+                            <rect width="400" height="200" fill="url(#grid)" />
+                            
+                            {/* Axes */}
+                            <line x1="50" y1="180" x2="380" y2="180" stroke="#374151" strokeWidth="2"/>
+                            <line x1="50" y1="180" x2="50" y2="20" stroke="#374151" strokeWidth="2"/>
+                            
+                            {/* ROI Growth Curve - Quadratic curve showing exponential growth */}
+                            <path 
+                              d={`M 80 180 Q 150 ${180 - Math.min(60, metrics.paybackPeriod * 2)} 200 ${180 - Math.min(80, metrics.roiPercentage / 2)} T 320 ${180 - Math.min(140, metrics.roiPercentage * 1.4)}`}
+                              stroke="#8b5cf6" 
+                              strokeWidth="4" 
+                              fill="none"
+                            />
+                            
+                            {/* Break-even point */}
+                            {metrics.paybackPeriod > 0 && metrics.paybackPeriod < 24 && (
+                              <>
+                                <circle cx={80 + (metrics.paybackPeriod / 24) * 240} cy="180" r="6" fill="#f59e0b" stroke="white" strokeWidth="2" />
+                                <text x={80 + (metrics.paybackPeriod / 24) * 240} y={200} textAnchor="middle" className="text-xs fill-orange-600 font-semibold">
+                                  Break-even
+                                </text>
+                              </>
+                            )}
+                            
+                            {/* Start and End points */}
+                            <circle cx="80" cy="180" r="6" fill="#8b5cf6" stroke="white" strokeWidth="2" />
+                            <circle cx="320" cy={180 - Math.min(140, metrics.roiPercentage * 1.4)} r="8" fill="#8b5cf6" stroke="white" strokeWidth="2" />
+                            
+                            {/* Value labels */}
+                            <text x="320" y={170 - Math.min(140, metrics.roiPercentage * 1.4)} textAnchor="middle" className="text-xs fill-purple-600 font-semibold">{metrics.roiPercentage.toFixed(0)}%</text>
+                            
+                            {/* Labels */}
+                            <text x="80" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Month 0</text>
+                            <text x="200" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Month 12</text>
+                            <text x="320" y="195" textAnchor="middle" className="text-xs fill-gray-600 font-medium">Month 24</text>
+                            <text x="25" y="100" textAnchor="middle" className="text-xs fill-gray-600" transform="rotate(-90 25 100)">ROI (%)</text>
+                          </svg>
+                          <div className="absolute top-2 right-2 bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
+                            Payback: {metrics.paybackPeriod.toFixed(1)}mo
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-200" />
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-6">
+                      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white text-center">
+                        <div className="text-2xl font-bold">{formatCurrency(metrics.totalMonthlyGain)}</div>
+                        <div className="text-sm text-blue-100">Monthly Gain</div>
+                      </div>
+                      <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white text-center">
+                        <div className="text-2xl font-bold">{metrics.roiPercentage.toFixed(1)}%</div>
+                        <div className="text-sm text-green-100">Annual ROI</div>
+                      </div>
+                      <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white text-center">
+                        <div className="text-2xl font-bold">{metrics.paybackPeriod.toFixed(1)}</div>
+                        <div className="text-sm text-purple-100">Payback (Months)</div>
+                      </div>
+                      <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg p-4 text-white text-center">
+                        <div className="text-2xl font-bold">{formatCurrency(metrics.totalAnnualGain)}</div>
+                        <div className="text-sm text-indigo-100">Annual Gain</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Executive Summary */}
@@ -457,14 +878,21 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
                       className="flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                     >
                       <Download className="w-4 h-4 mr-1" />
-                      Download Report
+                      HTML Report
+                    </button>
+                    <button
+                      onClick={downloadCSV}
+                      className="flex items-center justify-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Download CSV
                     </button>
                     <button
                       onClick={downloadReport}
                       className="flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                     >
                       <Download className="w-4 h-4 mr-1" />
-                      Export Data
+                      Export JSON
                     </button>
                   </div>
                 </div>
@@ -472,8 +900,9 @@ const AIROICalculator: React.FC<AIROICalculatorProps> = ({ onClose, currentAnaly
                   Based on your inputs, this AI project has an ROI of <strong>{metrics.roiPercentage.toFixed(0)}%</strong> and 
                   will pay for itself in <strong>{metrics.paybackPeriod.toFixed(1)} months</strong>. The total financial gain 
                   is projected to be <strong>{formatCurrency(metrics.totalAnnualGain)}</strong> per year, driven by{' '}
-                  <strong>{formatCurrency(metrics.laborCostSavings)}</strong> in monthly cost reductions and{' '}
-                  <strong>{formatCurrency(revenueImpact)}</strong> in new revenue.
+                  <strong>{formatCurrency(metrics.costReductionSavings)}</strong> in cost reduction savings,{' '}
+                  <strong>{formatCurrency(metrics.qualityImprovementSavings)}</strong> in quality improvement savings, and{' '}
+                  <strong>{formatCurrency(metrics.efficiencyImprovementEarnings)}</strong> in efficiency improvement earnings.
                 </p>
               </div>
             </div>

@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, TrendingUp, Filter, Globe, MapPin, Lightbulb, FileText } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, Building2, TrendingUp, Filter, Globe, MapPin, Lightbulb, Zap, Award, Users, Code, Database, Wrench, Download, Calculator } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
+import AIROICalculator from './AIROICalculator';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
 import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
-import { searchRealCasesInCSV, loadCSVContent } from '../utils/csvRealCasesService';
+import { searchRealCasesInCSV, loadCSVContent, RealCaseMatch } from '../utils/csvRealCasesService';
 
 interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
   onStartAnalysis: () => void;
   onStartFutureAnalysis?: () => void;
   onSectorChange?: (sector: string) => void;
-  initialTab?: 'identification' | 'implementation' | 'financials';
+  initialTab?: 'identification' | 'implementation' | 'financials' | 'roi';
   realUseCasesData?: any[];
 }
 
@@ -24,21 +25,24 @@ const Dashboard: React.FC<DashboardProps> = ({
   realUseCasesData: propRealUseCasesData = []
 }) => {
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials'>(initialTab);
-  // Generated strategy data
+  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials' | 'roi'>(initialTab);
+  // ROI Calculator state
+  const [showROICalculator, setShowROICalculator] = useState(false);
+  // Strategy data state
   const [generatedStrategy, setGeneratedStrategy] = useState<StrategyResponse | null>(null);
-  // Metric filter state (implementation tab)
+  // Metric filter state for implementation tab
   const [selectedMetric, setSelectedMetric] = useState<string>('');
-  // Real use cases fetched from CSV / DB
+  // Real use cases data from Supabase
   const [realUseCasesData, setRealUseCasesData] = useState<any[]>(propRealUseCasesData);
   const [loadingRealUseCases, setLoadingRealUseCases] = useState(false);
-  // Financials dropdown visibility
+  // Financial dropdown state
   const [showFinancialDropdown, setShowFinancialDropdown] = useState(false);
-
-  // Sync prop real use cases if passed in
+  
+  // If we receive real use cases data from props, use it
   useEffect(() => {
     if (propRealUseCasesData && propRealUseCasesData.length > 0) {
       setRealUseCasesData(propRealUseCasesData);
+      console.log("Received real use cases data from props:", propRealUseCasesData);
     }
   }, [propRealUseCasesData]);
 
@@ -47,23 +51,32 @@ const Dashboard: React.FC<DashboardProps> = ({
     setSelectedMetric('');
   }, [activeTab]);
 
-  // Close financial dropdown on outside click
+  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => setShowFinancialDropdown(false);
+    const handleClickOutside = () => {
+      setShowFinancialDropdown(false);
+    };
+
     if (showFinancialDropdown) {
       document.addEventListener('click', handleClickOutside);
     }
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showFinancialDropdown]);
 
-  // Filter selections and generation state
-  const [filters, setFilters] = useState<FilterData>({ sector: '', domain: '', process: '', stage: '' });
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showFinancialDropdown]);
+  
+  const [filters, setFilters] = useState<FilterData>({
+    sector: '',
+    domain: '',
+    process: '',
+    stage: ''
+  });
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Select options state
   const sectors = ['Service', 'Manufacturing'];
   const [domains, setDomains] = useState<string[]>([]);
-  const [processes, setProcesses] = useState<string[]>([]);
+  const [processes, setProcesses] = useState<string[]>([]); // Now used for Key Functional Areas
   const [stages, setStages] = useState<string[]>([]);
 
   // Fetch Key Functional Areas when domain changes
@@ -73,33 +86,46 @@ const Dashboard: React.FC<DashboardProps> = ({
         setProcesses([]);
         return;
       }
+      
       try {
         const tableName = filters.sector === 'Service' ? 'Service_Match_Cases' : 'Manufacturing_Match_Case';
         const { data, error } = await supabase
           .from(tableName)
           .select('Business-process,Key_Functional_Areas');
+          
         if (error) {
           console.error('Supabase error:', error);
           setProcesses([]);
           return;
         }
+        
         if (!data || !data.length) {
+          console.log('No data returned for', filters.domain);
           setProcesses([]);
           return;
         }
+        
+        console.log('Data returned:', data);
+        
         // Case-insensitive match for Business-process
-        const filtered = data.filter((row: any) =>
-          row['Business-process'] &&
-          typeof row['Business-process'] === 'string' &&
+        const filtered = data.filter((row: any) => 
+          row['Business-process'] && 
+          typeof row['Business-process'] === 'string' && 
           row['Business-process'].toLowerCase() === filters.domain.toLowerCase()
         );
+        
+        console.log('Filtered data:', filtered);
+        
         const uniqueAreas = Array.from(new Set(filtered.map((row: any) => row['Key_Functional_Areas']).filter(Boolean)));
+        console.log('Unique areas:', uniqueAreas);
+        
         setProcesses(uniqueAreas);
       } catch (err) {
         console.error('Failed to fetch processes:', err);
         setProcesses([]);
       }
     };
+    
     fetchProcesses();
   }, [filters.sector, filters.domain]);
 
@@ -226,124 +252,120 @@ const Dashboard: React.FC<DashboardProps> = ({
     return formattedText;
   };
 
-  // (Summary function removed; only full report export retained)
+  // Generate comprehensive summary text
+  const generateSummaryText = () => {
+    const currentDate = new Date().toLocaleDateString();
+    let summary = '';
 
-  // (Summary download removed; using single full report export)
+    summary += `AI STRATEGY DASHBOARD SUMMARY\n`;
+    summary += `Generated on: ${currentDate}\n`;
+    summary += `${'='.repeat(50)}\n\n`;
 
-  // Generate a FULL comprehensive report (everything fetched) as plain text
-  const generateFullReportText = () => {
-    const lines: string[] = [];
-    const timestamp = new Date().toISOString();
-    lines.push('AI STRATEGY – FULL COMPREHENSIVE REPORT');
-    lines.push(`Generated: ${timestamp}`);
-    lines.push(''.padEnd(80, '='));
+    // Add filter information
+    if (filters.sector || filters.domain || filters.process || filters.stage) {
+      summary += `CURRENT FILTERS:\n`;
+      summary += `${'-'.repeat(20)}\n`;
+      if (filters.sector) summary += `Sector: ${filters.sector}\n`;
+      if (filters.domain) summary += `Domain: ${filters.domain}\n`;
+      if (filters.process) summary += `Process: ${filters.process}\n`;
+      if (filters.stage) summary += `Stage: ${filters.stage}\n`;
+      summary += `\n`;
+    }
 
-    // Filters
-    lines.push('\nSELECTED FILTERS');
-    lines.push('-'.repeat(40));
-    if (filters.sector) lines.push(`Sector: ${filters.sector}`);
-    if (filters.domain) lines.push(`Domain: ${filters.domain}`);
-    if (filters.process) lines.push(`Key Functional Area: ${filters.process}`);
-    if (filters.stage) lines.push(`Job Role: ${filters.stage}`);
-    if (!filters.sector && !filters.domain && !filters.process && !filters.stage) lines.push('None selected');
-
-    // Matched Business Use Cases
-    if (generatedStrategy?.matchedUseCases) {
-      const matched = Object.values(generatedStrategy.matchedUseCases as unknown as Record<string, any>);
-      lines.push('\nMATCHED BUSINESS USE CASES');
-      lines.push('-'.repeat(40));
-      if (matched.length === 0) {
-        lines.push('No matched business use cases.');
-      } else {
-        matched.forEach((uc: any, idx: number) => {
-          lines.push(`\n${idx + 1}. ${uc.businessProcess || uc.name || 'Business Process'}`);
-          if (uc.jobRole) lines.push(`   Job Role: ${uc.jobRole}`);
-          if (uc.functionalAreas && uc.functionalAreas.length) lines.push(`   Functional Areas: ${uc.functionalAreas.join(', ')}`);
-          if (uc.aiUseCase) lines.push(`   AI Use Case: ${uc.aiUseCase}`);
-          if (uc.impact) lines.push(`   Impact: ${uc.impact}`);
-          if (uc.primaryMetric) lines.push(`   Primary Metric: ${uc.primaryMetric}`);
-          if (uc.secondaryMetric) lines.push(`   Secondary Metric: ${uc.secondaryMetric}`);
-          if (uc.expectedROI) lines.push(`   Expected ROI: ${uc.expectedROI}`);
+    // Add strategy data if available
+    if (generatedStrategy) {
+      summary += `GENERATED AI STRATEGY:\n`;
+      summary += `${'-'.repeat(25)}\n`;
+      
+      if (generatedStrategy.matchedUseCases && generatedStrategy.matchedUseCases.length > 0) {
+        summary += `MATCHED BUSINESS USE CASES (${generatedStrategy.matchedUseCases.length}):\n`;
+        generatedStrategy.matchedUseCases.forEach((useCase, index) => {
+          summary += `\n${index + 1}. ${useCase.name || useCase.title || 'Use Case'}\n`;
+          if (useCase.description) {
+            summary += `   Description: ${useCase.description}\n`;
+          }
+          if (useCase.impact) {
+            summary += `   Impact: ${useCase.impact}\n`;
+          }
+          if (useCase.sector) {
+            summary += `   Sector: ${useCase.sector}\n`;
+          }
+          if (useCase.domain) {
+            summary += `   Domain: ${useCase.domain}\n`;
+          }
         });
+        summary += `\n`;
+      }
+
+      if (generatedStrategy.implementationDetails) {
+        summary += `IMPLEMENTATION DETAILS:\n`;
+        summary += `${generatedStrategy.implementationDetails}\n\n`;
+      }
+
+      if (generatedStrategy.recommendations) {
+        summary += `RECOMMENDATIONS:\n`;
+        summary += `${generatedStrategy.recommendations}\n\n`;
       }
     }
 
-    // AI Implementation Details
-    if (generatedStrategy?.aiUseCases) {
-      const aiCases = Object.values(generatedStrategy.aiUseCases as unknown as Record<string, any>);
-      lines.push('\nAI IMPLEMENTATION DETAILS');
-      lines.push('-'.repeat(40));
-      if (aiCases.length === 0) {
-        lines.push('No AI implementation details available.');
-      } else {
-        aiCases.forEach((ai: any, idx: number) => {
-          lines.push(`\n${idx + 1}. ${ai.useCase || ai['Use Case'] || 'AI Use Case'}`);
-          if (ai.aiSystemType) lines.push(`   System Type: ${ai.aiSystemType}`);
-          if (Array.isArray(ai.tools) && ai.tools.length) lines.push(`   Tools/Platforms: ${ai.tools.join(', ')}`);
-          if (typeof ai.customDev !== 'undefined') lines.push(`   Custom Development: ${ai.customDev ? 'Yes' : 'No'}`);
-          if (ai.dataQuantitative) lines.push(`   Data Needs (Quantitative): ${ai.dataQuantitative}`);
-          if (ai.dataQualitative) lines.push(`   Data Needs (Qualitative): ${ai.dataQualitative}`);
-          if (ai.exampleSources) lines.push(`   Example Sources: ${ai.exampleSources}`);
-          if (ai.dataAvailabilityNotes) lines.push(`   Data Availability Notes: ${ai.dataAvailabilityNotes}`);
-          if (ai.implementationNotes) lines.push(`   Implementation Notes: ${ai.implementationNotes}`);
-          if (ai.expectedROI) lines.push(`   Expected ROI: ${ai.expectedROI}`);
-        });
-      }
-    }
-
-    // Real World Implementation Examples (from state realUseCasesData)
-    if (realUseCasesData && realUseCasesData.length) {
-      lines.push('\nREAL WORLD IMPLEMENTATION EXAMPLES');
-      lines.push('-'.repeat(40));
-      realUseCasesData.forEach((rc: any, idx: number) => {
-        lines.push(`\n${idx + 1}. Company: ${rc.Company || rc.company || 'Example'}`);
-        if (rc.Sector) lines.push(`   Sector: ${rc.Sector}`);
-        if (rc.matchScore !== undefined) lines.push(`   Match Score: ${rc.matchScore}`);
-        if (rc.BP) {
-          lines.push('   Business Overview:');
-          rc.BP.split('\n').forEach((l: string) => lines.push(`     ${l}`));
+    // Add real world implementation examples
+    if (filteredRealUseCases.length > 0) {
+      summary += `REAL WORLD IMPLEMENTATION EXAMPLES (${filteredRealUseCases.length}):\n`;
+      summary += `${'-'.repeat(40)}\n`;
+      
+      filteredRealUseCases.forEach((useCase, index) => {
+        summary += `\n${index + 1}. ${useCase.company || useCase.Company || 'Implementation Example'}\n`;
+        summary += `${'='.repeat(30)}\n`;
+        
+        if (useCase.BP) {
+          summary += `BUSINESS OVERVIEW:\n`;
+          summary += `${useCase.BP}\n\n`;
         }
-        if (rc['Real Project 1']) {
-          lines.push('   Project 1:');
-          rc['Real Project 1'].split('\n').forEach((l: string) => lines.push(`     ${l}`));
+        
+        if (useCase['Real Project 1']) {
+          summary += `GLOBAL IMPLEMENTATION:\n`;
+          summary += `${useCase['Real Project 1']}\n\n`;
         }
-        if (rc['Real Project 2']) {
-          lines.push('   Project 2:');
-          rc['Real Project 2'].split('\n').forEach((l: string) => lines.push(`     ${l}`));
+        
+        if (useCase['Real Project 2']) {
+          summary += `REGIONAL IMPLEMENTATION:\n`;
+          summary += `${useCase['Real Project 2']}\n\n`;
         }
+        
+        if (useCase.Sector) {
+          summary += `Sector: ${useCase.Sector}\n`;
+        }
+        
+        summary += `\n`;
       });
-    } else {
-      lines.push('\nREAL WORLD IMPLEMENTATION EXAMPLES');
-      lines.push('-'.repeat(40));
-      lines.push('No real world examples loaded yet.');
     }
 
-    // Summary Statistics
-    lines.push('\nSUMMARY STATISTICS');
-    lines.push('-'.repeat(40));
-    lines.push(`Matched Business Use Cases: ${generatedStrategy?.matchedUseCases ? Object.keys(generatedStrategy.matchedUseCases).length : 0}`);
-    lines.push(`AI Implementation Details: ${generatedStrategy?.aiUseCases ? Object.keys(generatedStrategy.aiUseCases).length : 0}`);
-    lines.push(`Real World Examples: ${realUseCasesData ? realUseCasesData.length : 0}`);
-    lines.push(`Active Tab: ${activeTab}`);
-    lines.push(''.padEnd(80, '='));
-    lines.push('END OF FULL REPORT');
-    return lines.join('\n');
+    // Add summary statistics
+    summary += `SUMMARY STATISTICS:\n`;
+    summary += `${'-'.repeat(20)}\n`;
+    if (generatedStrategy?.matchedUseCases) {
+      summary += `Total Matched Use Cases: ${generatedStrategy.matchedUseCases.length}\n`;
+    }
+    summary += `Total Real World Examples: ${filteredRealUseCases.length}\n`;
+    if (selectedMetric) {
+      summary += `Applied Filter: ${selectedMetric}\n`;
+    }
+    summary += `Active Tab: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}\n`;
+    
+    summary += `\n${'='.repeat(50)}\n`;
+    summary += `End of AI Strategy Dashboard Summary\n`;
+
+    return summary;
   };
 
-  const downloadFullReport = () => {
-    if (!generatedStrategy) return; // Only allow when a strategy is generated
-    const fullText = generateFullReportText();
-    try {
-      // Persist the full text so FutureStateAnalysisWizard can build a true cumulative report
-      localStorage.setItem('ai_full_strategy_report', fullText);
-    } catch (e) {
-      console.warn('Unable to persist full strategy report to localStorage', e);
-    }
-    const blob = new Blob([fullText], { type: 'text/plain' });
+  // Download summary as text file
+  const downloadSummary = () => {
+    const summaryText = generateSummaryText();
+    const blob = new Blob([summaryText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ai-strategy-full-report-${new Date().toISOString().split('T')[0]}.txt`;
+    link.download = `ai-strategy-summary-${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -804,6 +826,19 @@ const Dashboard: React.FC<DashboardProps> = ({
             >
               Implementation
             </button>
+            {/* ROI Calculator Tab */}
+            <button
+              onClick={() => setActiveTab('roi')}
+              className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] flex items-center gap-2 ${
+                activeTab === 'roi'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } transition-colors duration-200`}
+            >
+              <Calculator className="w-4 h-4" />
+              ROI Calculator
+            </button>
+            
             {/* Financials Tab with Dropdown */}
             <div className="relative">
               <button
@@ -875,7 +910,16 @@ const Dashboard: React.FC<DashboardProps> = ({
           </nav>
         </div>
         
-        {/* (Report download button moved to bottom of implementation tab) */}
+        {/* Download Summary Button */}
+        <div className="flex justify-end">
+          <button
+            onClick={downloadSummary}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+          >
+            <Download className="w-4 h-4" />
+            Download Summary
+          </button>
+        </div>
       </div>
 
       {/* Header Title - Only show for identification tab */}
@@ -1413,19 +1457,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                     Proceed to Financial Analysis
                   </button>
                 </div>
-
-                {/* Download Report Button at Bottom */}
-                <div className="mt-10 flex justify-center px-2">
-                  <button
-                    onClick={downloadFullReport}
-                    disabled={!generatedStrategy}
-                    className={`inline-flex items-center gap-2 px-7 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed ${generatedStrategy ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-300 text-white'}`}
-                    aria-label="Download full comprehensive AI strategy report as text"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Download Report
-                  </button>
-                </div>
               </div>
             </div>
           ) : (
@@ -1608,6 +1639,116 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'roi' && (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-serif leading-tight">AI ROI Calculator</h2>
+            <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Calculate your AI transformation return on investment</p>
+            <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Calculator className="w-8 h-8 mr-3" />
+                  <div>
+                    <h3 className="text-xl font-bold">ROI Dashboard & Calculator</h3>
+                    <p className="text-blue-100">Comprehensive AI investment analysis tools</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowROICalculator(true)}
+                  className="bg-white/20 hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2 backdrop-blur-sm"
+                >
+                  <Calculator className="w-4 h-4" />
+                  Open Calculator
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">ROI Analysis</h4>
+                  <p className="text-sm text-gray-600">Calculate return on investment, payback period, and financial metrics</p>
+                </div>
+
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Target className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Process Analysis</h4>
+                  <p className="text-sm text-gray-600">Analyze current vs. future process efficiency and cost savings</p>
+                </div>
+
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Download className="w-8 h-8 text-purple-600" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Export Reports</h4>
+                  <p className="text-sm text-gray-600">Download comprehensive reports in multiple formats (CSV, PDF, HTML)</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Key Features</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-gray-700">Real-time ROI calculations</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-gray-700">Process efficiency analysis</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-gray-700">Cost-benefit breakdown</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-gray-700">Investment payback timeline</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-gray-700">Executive summary reports</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-gray-700">CSV data export</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => setShowROICalculator(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 mx-auto"
+                >
+                  <Calculator className="w-5 h-5" />
+                  Launch ROI Calculator
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ROI Calculator Modal */}
+      {showROICalculator && (
+        <AIROICalculator 
+          onClose={() => setShowROICalculator(false)}
+        />
       )}
     </div>
   </div>
