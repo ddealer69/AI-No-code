@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, Building2, TrendingUp, Filter, Globe, MapPin, Lightbulb, Zap, Award, Users, Code, Database, Wrench, Download, Calculator } from 'lucide-react';
+import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, TrendingUp, Filter, Globe, MapPin, Lightbulb, Download, Calculator } from 'lucide-react';
 import { REAL_USE_CASES } from '../data/demoData';
 import AIROICalculator from './AIROICalculator';
+import FinancialAnalysis from './FinancialAnalysis';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
 import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
-import { searchRealCasesInCSV, loadCSVContent, RealCaseMatch } from '../utils/csvRealCasesService';
+import { searchRealCasesInCSV, loadCSVContent } from '../utils/csvRealCasesService';
 
 interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
@@ -252,125 +253,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     return formattedText;
   };
 
-  // Generate comprehensive summary text
-  const generateSummaryText = () => {
-    const currentDate = new Date().toLocaleDateString();
-    let summary = '';
 
-    summary += `AI STRATEGY DASHBOARD SUMMARY\n`;
-    summary += `Generated on: ${currentDate}\n`;
-    summary += `${'='.repeat(50)}\n\n`;
-
-    // Add filter information
-    if (filters.sector || filters.domain || filters.process || filters.stage) {
-      summary += `CURRENT FILTERS:\n`;
-      summary += `${'-'.repeat(20)}\n`;
-      if (filters.sector) summary += `Sector: ${filters.sector}\n`;
-      if (filters.domain) summary += `Domain: ${filters.domain}\n`;
-      if (filters.process) summary += `Process: ${filters.process}\n`;
-      if (filters.stage) summary += `Stage: ${filters.stage}\n`;
-      summary += `\n`;
-    }
-
-    // Add strategy data if available
-    if (generatedStrategy) {
-      summary += `GENERATED AI STRATEGY:\n`;
-      summary += `${'-'.repeat(25)}\n`;
-      
-      if (generatedStrategy.matchedUseCases && generatedStrategy.matchedUseCases.length > 0) {
-        summary += `MATCHED BUSINESS USE CASES (${generatedStrategy.matchedUseCases.length}):\n`;
-        generatedStrategy.matchedUseCases.forEach((useCase, index) => {
-          summary += `\n${index + 1}. ${useCase.name || useCase.title || 'Use Case'}\n`;
-          if (useCase.description) {
-            summary += `   Description: ${useCase.description}\n`;
-          }
-          if (useCase.impact) {
-            summary += `   Impact: ${useCase.impact}\n`;
-          }
-          if (useCase.sector) {
-            summary += `   Sector: ${useCase.sector}\n`;
-          }
-          if (useCase.domain) {
-            summary += `   Domain: ${useCase.domain}\n`;
-          }
-        });
-        summary += `\n`;
-      }
-
-      if (generatedStrategy.implementationDetails) {
-        summary += `IMPLEMENTATION DETAILS:\n`;
-        summary += `${generatedStrategy.implementationDetails}\n\n`;
-      }
-
-      if (generatedStrategy.recommendations) {
-        summary += `RECOMMENDATIONS:\n`;
-        summary += `${generatedStrategy.recommendations}\n\n`;
-      }
-    }
-
-    // Add real world implementation examples
-    if (filteredRealUseCases.length > 0) {
-      summary += `REAL WORLD IMPLEMENTATION EXAMPLES (${filteredRealUseCases.length}):\n`;
-      summary += `${'-'.repeat(40)}\n`;
-      
-      filteredRealUseCases.forEach((useCase, index) => {
-        summary += `\n${index + 1}. ${useCase.company || useCase.Company || 'Implementation Example'}\n`;
-        summary += `${'='.repeat(30)}\n`;
-        
-        if (useCase.BP) {
-          summary += `BUSINESS OVERVIEW:\n`;
-          summary += `${useCase.BP}\n\n`;
-        }
-        
-        if (useCase['Real Project 1']) {
-          summary += `GLOBAL IMPLEMENTATION:\n`;
-          summary += `${useCase['Real Project 1']}\n\n`;
-        }
-        
-        if (useCase['Real Project 2']) {
-          summary += `REGIONAL IMPLEMENTATION:\n`;
-          summary += `${useCase['Real Project 2']}\n\n`;
-        }
-        
-        if (useCase.Sector) {
-          summary += `Sector: ${useCase.Sector}\n`;
-        }
-        
-        summary += `\n`;
-      });
-    }
-
-    // Add summary statistics
-    summary += `SUMMARY STATISTICS:\n`;
-    summary += `${'-'.repeat(20)}\n`;
-    if (generatedStrategy?.matchedUseCases) {
-      summary += `Total Matched Use Cases: ${generatedStrategy.matchedUseCases.length}\n`;
-    }
-    summary += `Total Real World Examples: ${filteredRealUseCases.length}\n`;
-    if (selectedMetric) {
-      summary += `Applied Filter: ${selectedMetric}\n`;
-    }
-    summary += `Active Tab: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}\n`;
-    
-    summary += `\n${'='.repeat(50)}\n`;
-    summary += `End of AI Strategy Dashboard Summary\n`;
-
-    return summary;
-  };
-
-  // Download summary as text file
-  const downloadSummary = () => {
-    const summaryText = generateSummaryText();
-    const blob = new Blob([summaryText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `ai-strategy-summary-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
 
   // Search CSV file for real use cases matching the given use case
   const searchRealUseCases = async (useCase: any) => {
@@ -839,87 +722,20 @@ const Dashboard: React.FC<DashboardProps> = ({
               ROI Calculator
             </button>
             
-            {/* Financials Tab with Dropdown */}
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowFinancialDropdown(!showFinancialDropdown);
-                }}
-                onMouseEnter={() => setShowFinancialDropdown(true)}
-                className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] flex items-center gap-1 ${
-                  activeTab === 'financials'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } transition-colors duration-200`}
-              >
-                Financials
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showFinancialDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {/* Dropdown Menu */}
-              <div 
-                className={`absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 transition-all duration-200 ${
-                  showFinancialDropdown ? 'opacity-100 visible transform translate-y-0' : 'opacity-0 invisible transform -translate-y-2'
-                }`}
-                onClick={(e) => e.stopPropagation()}
-                onMouseEnter={() => setShowFinancialDropdown(true)}
-                onMouseLeave={() => setShowFinancialDropdown(false)}
-              >
-                <div className="py-2">
-                  <button
-                    onClick={() => {
-                      setActiveTab('financials');
-                      setShowFinancialDropdown(false);
-                      if (onStartAnalysis) {
-                        onStartAnalysis();
-                      }
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 flex items-start gap-3"
-                  >
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Target className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Current State Analysis</div>
-                      <div className="text-xs text-gray-500">Assess your current AI readiness and capabilities</div>
-                    </div>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      setActiveTab('financials');
-                      setShowFinancialDropdown(false);
-                      if (onStartFutureAnalysis) {
-                        onStartFutureAnalysis();
-                      }
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors duration-150 flex items-start gap-3"
-                  >
-                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Future State Analysis</div>
-                      <div className="text-xs text-gray-500">Plan your future AI implementation and ROI</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Financials Tab */}
+            <button
+              onClick={() => setActiveTab('financials')}
+              className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] ${
+                activeTab === 'financials'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } transition-colors duration-200`}
+            >
+              Financials
+            </button>
           </nav>
         </div>
-        
-        {/* Download Summary Button */}
-        <div className="flex justify-end">
-          <button
-            onClick={downloadSummary}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-          >
-            <Download className="w-4 h-4" />
-            Download Summary
-          </button>
-        </div>
+
       </div>
 
       {/* Header Title - Only show for identification tab */}
@@ -1478,167 +1294,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeTab === 'financials' && (
-        <div className="max-w-4xl mx-auto px-4 py-16 sm:py-20">
-          {/* Financial Analysis Dropdown Navigation */}
-          <div className="mb-8">
-            <div className="flex justify-center">
-              <div className="relative">
-                <button
-                  onClick={() => setShowFinancialDropdown(!showFinancialDropdown)}
-                  className="bg-white border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gray-50 transition-colors shadow-sm"
-                >
-                  <span className="text-gray-700 font-medium">Financial Analysis Options</span>
-                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showFinancialDropdown ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {showFinancialDropdown && (
-                  <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                    <button
-                      onClick={() => {
-                        if (onStartAnalysis) {
-                          onStartAnalysis();
-                        }
-                        setShowFinancialDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-gray-100"
-                    >
-                      <Target className="w-4 h-4 text-blue-600" />
-                      <div>
-                        <div className="font-medium text-gray-900">Current State Analysis</div>
-                        <div className="text-sm text-gray-500">Assess AI readiness & gaps</div>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (onStartFutureAnalysis) {
-                          onStartFutureAnalysis();
-                        }
-                        setShowFinancialDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors flex items-center gap-3"
-                    >
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                      <div>
-                        <div className="font-medium text-gray-900">Future State Analysis</div>
-                        <div className="text-sm text-gray-500">ROI projections & planning</div>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Financial Analysis Hub</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Choose your analysis path to understand the financial impact of AI implementation in your business.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Current State Analysis Card */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Current State Analysis</h3>
-                </div>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Assess your organization's current AI readiness, capabilities, and identify opportunities for improvement across technology, processes, and people.
-                </p>
-                <ul className="space-y-2 mb-6 text-sm text-gray-600">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Technology infrastructure assessment
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Current process evaluation
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Team readiness analysis
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Comprehensive scoring report
-                  </li>
-                </ul>
-                <button
-                  onClick={() => {
-                    if (onStartAnalysis) {
-                      onStartAnalysis();
-                    }
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <Target className="w-4 h-4" />
-                  Start Current State Analysis
-                </button>
-              </div>
-            </div>
-
-            {/* Future State Analysis Card */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Future State Analysis</h3>
-                </div>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Plan your future AI implementation strategy, calculate ROI projections, and create a roadmap for achieving your AI transformation goals.
-                </p>
-                <ul className="space-y-2 mb-6 text-sm text-gray-600">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    ROI calculation and projections
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Implementation timeline planning
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Resource requirement analysis
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Strategic roadmap creation
-                  </li>
-                </ul>
-                <button
-                  onClick={() => {
-                    if (onStartFutureAnalysis) {
-                      onStartFutureAnalysis();
-                    }
-                  }}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <TrendingUp className="w-4 h-4" />
-                  Start Future State Analysis
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-12 text-center">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
-              <p className="text-blue-800 text-sm leading-relaxed">
-                <strong>Recommendation:</strong> Start with the Current State Analysis to establish your baseline, 
-                then proceed to Future State Analysis for strategic planning and ROI projections.
-              </p>
-            </div>
-          </div>
-        </div>
+        <FinancialAnalysis />
       )}
 
       {activeTab === 'roi' && (
