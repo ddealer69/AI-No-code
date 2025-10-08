@@ -1,11 +1,6 @@
 import Papa from 'papaparse';
 
-interface CSVRow {
-  'S No.': string;
-  'Details': string;
-  'Real case 1': string;
-  'Real case 2': string;
-}
+
 
 export interface RealCaseMatch {
   id: number;
@@ -28,22 +23,30 @@ export interface RealCaseMatch {
  * @param aiUseCase - AI use case description to search for
  * @returns Array of matching real cases from the CSV
  */
-// Helper function to clean text according to specific formatting rules
+// Helper function to clean text with better normalization for AI use cases
 const cleanSearchText = (text: string): string => {
   if (!text) return '';
   
   return text
-    .replace(/^-\s*/, '') // Remove leading dash and space
-    .replace(/-/g, '') // Remove all hyphens (step-by-step -> stepbystep)
+    .replace(/^[-\s•*]+/, '') // Remove leading dash, bullets, spaces
+    .replace(/[-\s•*]+$/, '') // Remove trailing dash, bullets, spaces
+    .replace(/\s*[-•*]\s*/g, ' ') // Replace bullets/dashes within text with spaces
     .replace(/e\.g\.,?/gi, 'eg') // Replace e.g., with eg
-    .replace(/\./g, '') // Remove all periods
-    .replace(/[^\w\s]/g, '') // Remove special characters except letters, numbers, and spaces
+    .replace(/AI/gi, 'ai') // Normalize AI capitalization
+    .replace(/ML/gi, 'ml') // Normalize ML capitalization  
+    .replace(/NLP/gi, 'nlp') // Normalize NLP capitalization
+    .replace(/GPT/gi, 'gpt') // Normalize GPT capitalization
+    .replace(/[^\w\s\-\&\/\(\)]/g, '') // Keep alphanumeric, spaces, hyphens, &, /, ()
     .replace(/\s+/g, ' ') // Replace multiple spaces with single space
     .trim()
     .toLowerCase();
 };
 
-// Enhanced search function for real use cases in CSV data
+
+
+
+
+// Simple but robust search function
 export const searchRealCasesInCSV = (
   csvData: any[],
   businessProcess: string,
@@ -55,182 +58,162 @@ export const searchRealCasesInCSV = (
     return [];
   }
 
-  console.log('Searching CSV with criteria:', { businessProcess, functionalArea, aiUseCase });
-
-  // Clean the search criteria according to the formatting rules
-  const cleanedBusinessProcess = cleanSearchText(businessProcess);
-  const cleanedFunctionalArea = cleanSearchText(functionalArea);
-  const cleanedAiUseCase = cleanSearchText(aiUseCase);
-  
-  console.log('Cleaned search criteria:', { 
-    cleanedBusinessProcess, 
-    cleanedFunctionalArea, 
-    cleanedAiUseCase 
-  });
+  console.log('🔍 Simple Robust CSV Search Started');
+  console.log('Search criteria:', { businessProcess, functionalArea, aiUseCase });
   
   const matches: RealCaseMatch[] = [];
+  
+  // Clean search terms - simple but effective
+  const cleanBP = cleanSearchText(businessProcess || '');
+  const cleanFA = cleanSearchText(functionalArea || '');
+  const cleanAI = cleanSearchText(aiUseCase || '');
+  
+  console.log('Cleaned search terms:', { cleanBP, cleanFA, cleanAI });
 
   csvData.forEach((row, index) => {
-    console.log(`Row ${index} structure:`, Object.keys(row));
-    console.log(`Row ${index} data:`, row);
-    
-    // Try different possible column names for the details
-    const detailsField = row.Details || row['Details'] || row.details;
-    if (!detailsField) {
-      console.log(`Row ${index} has no Details field, skipping`);
+    // Skip header row or empty rows
+    if (!row || !row.Details || row.Details === 'Details') {
       return;
     }
 
-    console.log(`Processing row ${index}:`, detailsField);
+    const detailsField = row.Details.toString().trim();
+    if (!detailsField) return;
+
+    // Parse the Details field - Format: "BusinessProcess1, BusinessProcess2, FunctionalArea, AIUseCase, Impact"
+    const parts = detailsField.split(',').map((part: string) => part.trim());
     
-    // Parse the Details column according to the specific structure:
-    // {Business-process},  {Key_functional_areas}, {AI Use Cases},{Impact}
-    // Note: 2 spaces after business process comma, no space after AI use cases comma
-    
-    // First, let's split by commas but handle the specific spacing
-    let detailParts: string[] = [];
-    let remainingText = detailsField;
-    
-    // Extract business process (everything up to first ", " with 2 spaces)
-    const businessProcessMatch = remainingText.match(/^([^,]+),\s{2}/);
-    if (businessProcessMatch) {
-      detailParts.push(businessProcessMatch[1].trim());
-      remainingText = remainingText.substring(businessProcessMatch[0].length);
-    } else {
-      // Fallback: split by comma and take first part
-      const parts = remainingText.split(',');
-      detailParts.push(parts[0].trim());
-      remainingText = parts.slice(1).join(',');
-    }
-    
-    // Extract functional area (everything up to next comma)
-    const functionalAreaMatch = remainingText.match(/^([^,]+),/);
-    if (functionalAreaMatch) {
-      detailParts.push(functionalAreaMatch[1].trim());
-      remainingText = remainingText.substring(functionalAreaMatch[0].length);
-    } else {
-      const parts = remainingText.split(',');
-      detailParts.push(parts[0].trim());
-      remainingText = parts.slice(1).join(',');
-    }
-    
-    // Extract AI use case (everything up to next comma, no space after)
-    const aiUseCaseMatch = remainingText.match(/^([^,]+),([^,]*)/);
-    if (aiUseCaseMatch) {
-      detailParts.push(aiUseCaseMatch[1].trim());
-      detailParts.push(aiUseCaseMatch[2].trim()); // Impact
-    } else {
-      // Fallback: split remaining by comma
-      const parts = remainingText.split(',');
-      detailParts.push(parts[0]?.trim() || '');
-      detailParts.push(parts[1]?.trim() || '');
-    }
-    
-    if (detailParts.length < 3) {
-      console.log(`Row ${index} doesn't have enough detail parts, skipping`);
-      return;
+    if (parts.length < 4) {
+      return; // Skip if not enough parts
     }
 
-    // Extract and clean the parts
-    const [csvBusinessProcess, csvFunctionalArea, csvAiUseCase, csvImpact] = detailParts;
-    
-    // Clean the CSV data according to the same rules
-    const cleanedCsvBusinessProcess = cleanSearchText(csvBusinessProcess);
-    const cleanedCsvFunctionalArea = cleanSearchText(csvFunctionalArea);
-    const cleanedCsvAiUseCase = cleanSearchText(csvAiUseCase);
-    const cleanedCsvImpact = csvImpact ? cleanSearchText(csvImpact.replace(/[\u{1F300}-\u{1F9FF}]/gu, '')) : ''; // Remove emojis from impact
+    const csvData_parsed = {
+      businessProcess: cleanSearchText((parts[0] + ' ' + (parts[1] || '')).trim()),
+      functionalArea: cleanSearchText(parts[2] || ''), 
+      aiUseCase: cleanSearchText(parts[3] || ''),
+      impact: parts[4] || ''
+    };
 
-    console.log(`Row ${index} parsed and cleaned:`, {
-      original: { csvBusinessProcess, csvFunctionalArea, csvAiUseCase, csvImpact },
-      cleaned: { cleanedCsvBusinessProcess, cleanedCsvFunctionalArea, cleanedCsvAiUseCase, cleanedCsvImpact }
-    });
+    // Simple scoring - focus on what matters most
+    let score = 0;
+    let matchDetails = '';
 
-    // Calculate match score based on all three criteria
-    let matchScore = 0;
-    const maxScore = 3;
-
-    // First check for exact matches (highest priority)
-    const businessProcessExactMatch = cleanedCsvBusinessProcess === cleanedBusinessProcess;
-    const functionalAreaExactMatch = cleanedCsvFunctionalArea === cleanedFunctionalArea;
-    const aiUseCaseExactMatch = cleanedCsvAiUseCase === cleanedAiUseCase;
-
-    // Check business process match (exact match gets full score, partial gets 0.8)
-    if (cleanedCsvBusinessProcess && cleanedBusinessProcess) {
-      if (businessProcessExactMatch) {
-        matchScore++;
-        console.log(`Business process EXACT match found for row ${index}`);
-      } else if (cleanedCsvBusinessProcess.includes(cleanedBusinessProcess) ||
-                 cleanedBusinessProcess.includes(cleanedCsvBusinessProcess)) {
-        matchScore += 0.8;
-        console.log(`Business process partial match found for row ${index}`);
+    // 1. AI Use Case is most important (50% weight)
+    if (cleanAI && csvData_parsed.aiUseCase) {
+      if (csvData_parsed.aiUseCase.includes(cleanAI) || cleanAI.includes(csvData_parsed.aiUseCase)) {
+        score += 50; // Perfect AI match
+        matchDetails += 'AI-exact ';
+      } else {
+        // Check word overlap for AI use case
+        const aiWords = cleanAI.split(' ').filter(w => w.length > 2);
+        const csvAiWords = csvData_parsed.aiUseCase.split(' ').filter(w => w.length > 2);
+        let aiMatches = 0;
+        
+        for (const word of aiWords) {
+          if (csvAiWords.some(csvWord => csvWord.includes(word) || word.includes(csvWord))) {
+            aiMatches++;
+          }
+        }
+        
+        if (aiMatches >= Math.max(1, aiWords.length * 0.4)) {
+          score += Math.min(40, aiMatches * 8); // Scale based on matches
+          matchDetails += `AI-partial(${aiMatches}) `;
+        }
       }
     }
 
-    // Check functional area match (exact match gets full score, partial gets 0.8)
-    if (cleanedCsvFunctionalArea && cleanedFunctionalArea) {
-      if (functionalAreaExactMatch) {
-        matchScore++;
-        console.log(`Functional area EXACT match found for row ${index}`);
-      } else if (cleanedCsvFunctionalArea.includes(cleanedFunctionalArea) ||
-                 cleanedFunctionalArea.includes(cleanedCsvFunctionalArea)) {
-        matchScore += 0.8;
-        console.log(`Functional area partial match found for row ${index}`);
+    // 2. Business Process is second most important (30% weight)  
+    if (cleanBP && csvData_parsed.businessProcess) {
+      if (csvData_parsed.businessProcess.includes(cleanBP) || cleanBP.includes(csvData_parsed.businessProcess)) {
+        score += 30; 
+        matchDetails += 'BP-exact ';
+      } else {
+        const bpWords = cleanBP.split(' ').filter(w => w.length > 2);
+        const csvBpWords = csvData_parsed.businessProcess.split(' ').filter(w => w.length > 2);
+        let bpMatches = 0;
+        
+        for (const word of bpWords) {
+          if (csvBpWords.some(csvWord => csvWord.includes(word) || word.includes(csvWord))) {
+            bpMatches++;
+          }
+        }
+        
+        if (bpMatches >= Math.max(1, bpWords.length * 0.3)) {
+          score += Math.min(20, bpMatches * 5);
+          matchDetails += `BP-partial(${bpMatches}) `;
+        }
       }
     }
 
-    // Check AI use case match (exact match gets full score, partial gets 0.8)
-    if (cleanedCsvAiUseCase && cleanedAiUseCase) {
-      if (aiUseCaseExactMatch) {
-        matchScore++;
-        console.log(`AI use case EXACT match found for row ${index}`);
-      } else if (cleanedCsvAiUseCase.includes(cleanedAiUseCase) ||
-                 cleanedAiUseCase.includes(cleanedCsvAiUseCase)) {
-        matchScore += 0.8;
-        console.log(`AI use case partial match found for row ${index}`);
+    // 3. Functional Area is least important (20% weight) - often missing
+    if (cleanFA && csvData_parsed.functionalArea) {
+      if (csvData_parsed.functionalArea.includes(cleanFA) || cleanFA.includes(csvData_parsed.functionalArea)) {
+        score += 20;
+        matchDetails += 'FA-exact ';
+      } else {
+        const faWords = cleanFA.split(' ').filter(w => w.length > 2);
+        const csvFaWords = csvData_parsed.functionalArea.split(' ').filter(w => w.length > 2);
+        let faMatches = 0;
+        
+        for (const word of faWords) {
+          if (csvFaWords.some(csvWord => csvWord.includes(word) || word.includes(csvWord))) {
+            faMatches++;
+          }
+        }
+        
+        if (faMatches >= Math.max(1, faWords.length * 0.3)) {
+          score += Math.min(15, faMatches * 3);
+          matchDetails += `FA-partial(${faMatches}) `;
+        }
       }
     }
 
-    console.log(`Row ${index} match score: ${matchScore}/${maxScore}`);
+    // Bonus points for multiple field matches
+    const fieldsMatched = (score >= 25 ? 1 : 0) + (score >= 10 ? 1 : 0) + (score >= 5 ? 1 : 0);
+    if (fieldsMatched >= 2) {
+      score += fieldsMatched * 5; // Bonus for multi-field matches
+      matchDetails += `MultiMatch(${fieldsMatched}) `;
+    }
 
-    // Include results with at least 1.5 out of 3 matches for better coverage
-    // Exact matches will have higher scores (3.0) and appear first
-    if (matchScore >= 1.5) {
+    // Minimum threshold - be more lenient
+    const threshold = cleanFA && cleanFA.length > 0 ? 25 : 20; // Lower threshold if no functional area
+    
+    console.log(`Row ${index + 1}: Score=${score}, Threshold=${threshold}, Match=${matchDetails}, CSV_AI="${csvData_parsed.aiUseCase.substring(0, 60)}..."`);
+
+    if (score >= threshold) {
       matches.push({
         id: index + 1,
-        // Use a clean summary for details instead of the full CSV field
-        details: `${csvBusinessProcess}, ${csvFunctionalArea}, ${csvAiUseCase}${csvImpact ? ', ' + csvImpact : ''}`,
+        details: `${parts[0]}, ${parts[1]}, ${parts[2]}, ${parts[3]}${parts[4] ? ', ' + parts[4] : ''}`,
         realCase1: row['Real case 1'] || '',
         realCase2: row['Real case 2'] || '',
-        matchScore: matchScore / maxScore,
-        csvBusinessProcess,
-        csvFunctionalArea,
-        csvAiUseCase,
-        csvImpact,
-        isExactMatch: businessProcessExactMatch && functionalAreaExactMatch && aiUseCaseExactMatch
+        matchScore: Math.min(score / 100, 1.0), // Normalize to 0-1
+        csvBusinessProcess: parts[0] + ' ' + (parts[1] || ''),
+        csvFunctionalArea: parts[2],
+        csvAiUseCase: parts[3],
+        csvImpact: parts[4] || '',
+        isExactMatch: score >= 80
       });
     }
   });
 
-  console.log(`Found ${matches.length} matches with score >= 1.5/3`);
+  console.log(`✅ Found ${matches.length} matches using simple robust algorithm`);
   
-  // Sort by match score (highest first), with exact matches prioritized
-  const sortedMatches = matches.sort((a, b) => {
-    // If one is exact match and other isn't, prioritize exact match
-    if (a.isExactMatch && !b.isExactMatch) return -1;
-    if (!a.isExactMatch && b.isExactMatch) return 1;
-    // Otherwise sort by match score
-    return b.matchScore - a.matchScore;
-  });
+  // Sort by score (highest first)
+  const sortedMatches = matches.sort((a, b) => b.matchScore - a.matchScore);
   
-  // Get top 3 relevant matches, but return only the highest scoring one
-  const top3Matches = sortedMatches.slice(0, 3);
-  console.log(`Top 3 matches:`, top3Matches.map(m => ({ id: m.id, score: m.matchScore, isExact: m.isExactMatch })));
+  // Return only the best match
+  const result = sortedMatches.slice(0, 1);
   
-  // Return only the highest scoring match (first in sorted array)
-  const bestMatch = top3Matches.length > 0 ? [top3Matches[0]] : [];
-  console.log(`Returning best match:`, bestMatch.length > 0 ? { id: bestMatch[0].id, score: bestMatch[0].matchScore } : 'No matches');
+  if (result.length > 0) {
+    console.log(`🎯 Best match:`, result.map(m => ({
+      id: m.id,
+      score: (m.matchScore * 100).toFixed(0) + '%',
+      ai: m.csvAiUseCase?.substring(0, 40) + '...'
+    })));
+  } else {
+    console.log('❌ No matches found');
+  }
   
-  return bestMatch;
+  return result;
 };
 
 /**
@@ -238,21 +221,116 @@ export const searchRealCasesInCSV = (
  * @param filePath - Path to the CSV file
  * @returns Promise resolving to CSV content as string
  */
+// Comprehensive search across all available CSV files
+export const searchAllCSVFiles = async (
+  businessProcess: string,
+  functionalArea: string,
+  aiUseCase: string
+): Promise<RealCaseMatch[]> => {
+  const csvFiles = ['service', 'product', 'manufacturing'];
+  const allMatches: RealCaseMatch[] = [];
+  
+  console.log('🔍 Searching across all CSV files for best matches...');
+  
+  for (const sector of csvFiles) {
+    try {
+      const csvData = await loadCSVContent(sector);
+      const matches = searchRealCasesInCSV(csvData, businessProcess, functionalArea, aiUseCase);
+      
+      if (matches.length > 0) {
+        console.log(`✅ Found ${matches.length} matches in ${sector} sector`);
+        allMatches.push(...matches);
+      }
+    } catch (error) {
+      console.log(`⚠️ Could not load ${sector} CSV:`, (error as Error).message);
+    }
+  }
+  
+  // Sort all matches by score and return the best
+  const sortedMatches = allMatches.sort((a, b) => b.matchScore - a.matchScore);
+  return sortedMatches.slice(0, 1); // Return only the best match across all files
+};
+
+// Optimized search function for Dashboard use cases (handles missing functional area gracefully)
+export const searchRealCasesForDashboard = async (
+  businessProcess: string,
+  functionalArea: string | undefined,
+  aiUseCase: string,
+  sector: string = 'service'
+): Promise<RealCaseMatch[]> => {
+  console.log('🎯 Dashboard-optimized search started');
+  console.log('Search params:', { 
+    businessProcess, 
+    functionalArea: functionalArea || '(not provided)', 
+    aiUseCase: aiUseCase?.substring(0, 50) + '...',
+    sector 
+  });
+
+  try {
+    // Try primary sector first
+    let csvData = await loadCSVContent(sector);
+    let matches = searchRealCasesInCSV(csvData, businessProcess, functionalArea || '', aiUseCase);
+    
+    // If no good matches, try other sectors
+    if (matches.length === 0 || matches[0].matchScore < 0.6) {
+      console.log('🔄 Trying additional sectors for better matches...');
+      const additionalMatches = await searchAllCSVFiles(businessProcess, functionalArea || '', aiUseCase);
+      
+      if (additionalMatches.length > 0 && additionalMatches[0].matchScore > (matches[0]?.matchScore || 0)) {
+        matches = additionalMatches;
+      }
+    }
+    
+    console.log(`✅ Dashboard search complete: ${matches.length} matches found`);
+    return matches;
+    
+  } catch (error) {
+    console.error('❌ Dashboard search error:', error);
+    return [];
+  }
+};
+
 // Function to load CSV content from public directory based on sector
 export const loadCSVContent = async (sector: string): Promise<any[]> => {
   try {
     // Determine which CSV file to use based on sector
-    const csvPath = sector.toLowerCase() === 'service' ? '/serv-cases.csv' : '/manu-cases.csv';
+    let csvPath: string;
+    const sectorLower = sector.toLowerCase();
+    
+    if (sectorLower === 'service' || sectorLower === 'services') {
+      csvPath = '/serv-cases.csv';
+    } else if (sectorLower === 'manufacturing' || sectorLower === 'manu') {
+      csvPath = '/manu-cases.csv';
+    } else if (sectorLower === 'product' || sectorLower === 'products') {
+      csvPath = '/real-cases.csv';
+    } else {
+      // Default fallback - try service first, then others
+      csvPath = '/serv-cases.csv';
+    }
     
     console.log('Loading CSV from path:', csvPath, 'for sector:', sector);
     
-    const response = await fetch(csvPath);
+    let response = await fetch(csvPath);
+    
+    // If the primary file fails, try fallback files
+    if (!response.ok && csvPath === '/serv-cases.csv') {
+      console.log('Service CSV failed, trying real-cases.csv');
+      csvPath = '/real-cases.csv';
+      response = await fetch(csvPath);
+    }
+    
+    if (!response.ok && csvPath === '/real-cases.csv') {
+      console.log('Real cases CSV failed, trying manu-cases.csv');
+      csvPath = '/manu-cases.csv';
+      response = await fetch(csvPath);
+    }
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch CSV: ${response.statusText}`);
     }
-    const csvText = await response.text();
     
-    console.log('CSV text loaded, length:', csvText.length);
+    const csvText = await response.text();
+    console.log('CSV text loaded, length:', csvText.length, 'from:', csvPath);
     
     return new Promise((resolve, reject) => {
       Papa.parse(csvText, {
@@ -260,7 +338,10 @@ export const loadCSVContent = async (sector: string): Promise<any[]> => {
         skipEmptyLines: true,
         complete: (results) => {
           console.log('Parsed CSV data:', results.data.length, 'rows');
-          console.log('Sample row:', results.data[0]);
+          if (results.data.length > 0) {
+            console.log('Sample row structure:', Object.keys(results.data[0] as object));
+            console.log('Sample row data:', results.data[0]);
+          }
           resolve(results.data);
         },
         error: (error: any) => {

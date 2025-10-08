@@ -19,8 +19,8 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   onGenerateStrategy, 
-  onStartAnalysis, 
-  onStartFutureAnalysis,
+  onStartAnalysis: _onStartAnalysis, 
+  onStartFutureAnalysis: _onStartFutureAnalysis,
   onSectorChange,
   initialTab = 'identification',
   realUseCasesData: propRealUseCasesData = []
@@ -39,6 +39,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Financial dropdown state
   const [showFinancialDropdown, setShowFinancialDropdown] = useState(false);
   
+  // Filter state
+  const [filters, setFilters] = useState<FilterData>({
+    sector: '',
+    domain: '',
+    process: '',
+    stage: ''
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  
   // If we receive real use cases data from props, use it
   useEffect(() => {
     if (propRealUseCasesData && propRealUseCasesData.length > 0) {
@@ -51,6 +60,27 @@ const Dashboard: React.FC<DashboardProps> = ({
   useEffect(() => {
     setSelectedMetric('');
   }, [activeTab]);
+
+  // Search for real cases when filters change
+  useEffect(() => {
+    const searchBasedOnFilters = async () => {
+      if (filters.domain && filters.process && filters.stage) {
+        console.log('Filters changed, searching for real cases...');
+        
+        // Create a mock use case from current filters to search for real cases
+        const mockUseCase = {
+          businessProcess: filters.domain,
+          functionalAreas: [filters.process],
+          aiUseCase: `AI solution for ${filters.domain} - ${filters.process}`,
+          jobRole: filters.stage
+        };
+        
+        await searchRealUseCases(mockUseCase);
+      }
+    };
+    
+    searchBasedOnFilters();
+  }, [filters.domain, filters.process, filters.stage, filters.sector]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -66,14 +96,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       document.removeEventListener('click', handleClickOutside);
     };
   }, [showFinancialDropdown]);
-  
-  const [filters, setFilters] = useState<FilterData>({
-    sector: '',
-    domain: '',
-    process: '',
-    stage: ''
-  });
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const sectors = ['Service', 'Manufacturing'];
   const [domains, setDomains] = useState<string[]>([]);

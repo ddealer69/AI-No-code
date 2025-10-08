@@ -107,8 +107,9 @@ const RealUseCasesPage: React.FC<RealUseCasesPageProps> = ({
     return formattedText;
   };
 
-  // Use dynamic strategy from props if provided
-  const useCasesList = dbUseCases.length > 0 ? filterUseCases(dbUseCases, strategy) : Object.values(useCases);
+  // Use dynamic strategy from props if provided, but only show the first (best) match
+  const allUseCases = dbUseCases.length > 0 ? filterUseCases(dbUseCases, strategy) : Object.values(useCases);
+  const useCasesList = allUseCases.slice(0, 1); // Only show the first (best) match
 
   const handleExport = () => {
     const content = useCasesList.map((useCase) => `
@@ -146,7 +147,7 @@ Details: ${useCase.BP || 'No details available'}
     const lines: string[] = [];
     lines.push('REAL USE CASES – FULL PAGE EXPORT');
     lines.push(`Generated: ${timestamp}`);
-    lines.push(`Total Use Cases: ${useCasesList.length}`);
+    lines.push(`Top Matching Use Case: ${useCasesList.length > 0 ? '1 case' : 'No matches'}`);
     lines.push(''.padEnd(60, '='));
 
     const ADDITIONAL_SKIP = new Set([
@@ -188,7 +189,7 @@ Details: ${useCase.BP || 'No details available'}
 
     // Summary section (mirrors on-page summary call-to-action)
     lines.push('\nSUMMARY:');
-    lines.push(`You viewed ${useCasesList.length} real-world implementation example(s).`);
+    lines.push(`You viewed the best matching real-world implementation example.`);
     lines.push('End of Full Export');
 
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
@@ -373,8 +374,8 @@ Details: ${useCase.BP || 'No details available'}
           Ready to Implement Your AI Strategy?
         </h2>
         <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-          You've explored {useCasesList.length} real-world examples of successful AI implementations. 
-          These case studies demonstrate proven approaches and measurable outcomes for similar business challenges.
+          You've explored the best matching real-world example of successful AI implementation. 
+          This case study demonstrates proven approaches and measurable outcomes for similar business challenges.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
