@@ -8,4 +8,13 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://nelbackend.vercel.app',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  }
 });

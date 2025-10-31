@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createClient } from '@supabase/supabase-js';
+import axios from 'axios';
 
 const supabase = createClient(
   'https://kabdokfowpwrdgywjtfv.supabase.co',
@@ -18,7 +19,59 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
+  const [otp, setOTP] = useState('');
+  const [serverOTP, setServerOTP] = useState('');
   const { login } = useAuth();
+
+  const handleVerifyEmail = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      console.log('Sending verification email to:', email);
+      
+      const response = await axios.post('/api/ASBSmtp', 
+        { email: email },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
+
+      if (response.data.otp) {
+        setServerOTP(response.data.otp);
+        setShowOTP(true);
+        setError('');
+        console.log('OTP sent successfully');
+      } else {
+        setError(response.data.message || 'Failed to send OTP. Please try again.');
+        console.error('Failed to send OTP:', response.data);
+      }
+    } catch (err: any) {
+      console.error('Email verification error:', err);
+      setError(err.message || 'Failed to verify email. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = () => {
+    if (otp === serverOTP) {
+      setEmailVerified(true);
+      setError('');
+    } else {
+      setError('Incorrect OTP. Please try again.');
+    }
+  };
+
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +118,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <img src="/images/IMG-20250912-WA0002.jpg" alt="AI4Profit Logo" className="w-48" />
+          <img src="/images/ai4profit-logo.svg" alt="AI4Profit Logo" className="w-48" loading="eager" />
         </div>
         <h2 className="mt-8 text-center text-4xl font-bold text-gray-900 font-serif">
           Sign in to AI Strategy Builder
@@ -89,20 +142,54 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
               <label htmlFor="email" className="block text-sm font-bold text-gray-800 uppercase tracking-wide mb-2">
                 Email address
               </label>
-              <div className="mt-1 relative">
-                <Mail className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-12 classic-input block w-full placeholder-gray-400 focus:outline-none"
-                  placeholder="Enter your email"
-                />
+              <div className="mt-1 flex space-x-2">
+                <div className="relative flex-1">
+                  <Mail className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-12 classic-input block w-full placeholder-gray-400 focus:outline-none"
+                    placeholder="Enter your email"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleVerifyEmail}
+                  disabled={!isValidEmail(email) || isLoading || emailVerified}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {emailVerified ? 'Verified' : 'Verify Email'}
+                </button>
               </div>
+              {showOTP && !emailVerified && (
+                <div className="mt-4">
+                  <label htmlFor="otp" className="block text-sm font-bold text-gray-800 uppercase tracking-wide mb-2">
+                    Enter OTP
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      id="otp"
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOTP(e.target.value)}
+                      className="classic-input block w-full placeholder-gray-400 focus:outline-none"
+                      placeholder="Enter OTP"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOTP}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      Verify OTP
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -128,7 +215,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
             <div>
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !emailVerified}
                 className="w-full classic-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
