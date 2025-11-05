@@ -82,7 +82,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onShowLogin }) => {
   const handleVerifyEmail = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.post('/api/ASBSmtp',
+      const response = await axios.post('https://nelbackend.vercel.app/api/ASBSmtp',
         { email: formData.email },
         {
           headers: {

@@ -31,7 +31,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
       setError('');
       console.log('Sending verification email to:', email);
       
-      const response = await axios.post('/api/ASBSmtp', 
+      const response = await axios.post('https://nelbackend.vercel.app/api/ASBSmtp', 
         { email: email },
         {
           headers: {
