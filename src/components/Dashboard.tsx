@@ -253,24 +253,131 @@ const Dashboard: React.FC<DashboardProps> = ({
     setFilters({ sector: '', domain: '', process: '', stage: '' });
   };
 
+  // Download strategy as JSON
+  const downloadStrategy = () => {
+    if (!generatedStrategy) return;
+
+    const dataToDownload = {
+      generatedAt: new Date().toISOString(),
+      filters: filters,
+      strategy: generatedStrategy,
+      realUseCases: realUseCasesData
+    };
+
+    const jsonString = JSON.stringify(dataToDownload, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `AI-Strategy-${filters.sector}-${filters.domain}-${new Date().getTime()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download strategy as CSV
+  const downloadStrategyAsCSV = () => {
+    if (!generatedStrategy) return;
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Add headers and metadata
+    csvContent += "AI Strategy Report\n";
+    csvContent += `Generated: ${new Date().toISOString()}\n`;
+    csvContent += `Sector: ${filters.sector}\n`;
+    csvContent += `Domain: ${filters.domain}\n`;
+    csvContent += `Functional Area: ${filters.process}\n`;
+    csvContent += `Job Role: ${filters.stage}\n\n`;
+
+    // Add Matched Use Cases section
+    csvContent += "MATCHED BUSINESS USE CASES\n";
+    csvContent += "Business Process,Functional Area,Job Role,Primary Metric,Secondary Metric,AI Use Case,Impact,Expected ROI\n";
+    
+    Object.values(generatedStrategy.matchedUseCases).forEach((useCase: any) => {
+      const row = [
+        `"${useCase.businessProcess}"`,
+        `"${useCase.functionalAreas?.[0] || ''}"`,
+        `"${useCase.jobRole}"`,
+        `"${useCase.primaryMetric}"`,
+        `"${useCase.secondaryMetric}"`,
+        `"${useCase.aiUseCase}"`,
+        `"${useCase.impact}"`,
+        `"${useCase.expectedROI}"`
+      ].join(',');
+      csvContent += row + '\n';
+    });
+
+    csvContent += "\n\nAI IMPLEMENTATION DETAILS\n";
+    csvContent += "Use Case,AI System Type,Custom Development,Tools/Platforms,Implementation Notes\n";
+    
+    Object.values(generatedStrategy.aiUseCases).forEach((aiCase: any) => {
+      const row = [
+        `"${aiCase.useCase}"`,
+        `"${aiCase.aiSystemType}"`,
+        `"${aiCase.customDev ? 'Yes' : 'No'}"`,
+        `"${aiCase.tools?.join('; ') || ''}"`,
+        `"${aiCase.implementationNotes}"`
+      ].join(',');
+      csvContent += row + '\n';
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `AI-Strategy-${filters.sector}-${filters.domain}-${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Helper function to format text with bold headings
+  // Helper function to format list items with proper structure
+  const formatListItems = (text: string): string => {
+    if (!text) return text;
+    
+    // Replace numbered lists with styled list items
+    let formatted = text.replace(/^\d+\.\s+/gm, '<li style="margin-left: 1.25rem; margin-bottom: 0.5rem; line-height: 1.6;">');
+    formatted = formatted.replace(/<\/li>\n/g, '</li>\n');
+    
+    // Wrap multiple li items in ul
+    if (formatted.includes('<li')) {
+      formatted = '<ul style="list-style-position: inside; margin: 0; padding: 0;">' + formatted + '</ul>';
+    }
+    
+    return formatted;
+  };
+
   const formatTextWithBoldHeadings = (text: string) => {
     if (!text) return text;
     
-    // Define patterns to make bold
-    const patterns = [
-      'How AI Was Applied:',
-      'Continuous Learning:',
-      'Outcome:'
+    // Define section patterns with their styling
+    const sections = [
+      { label: 'Challenge:', color: '#dc2626' }, // red
+      { label: 'AI Approach:', color: '#2563eb' }, // blue
+      { label: 'Discovery:', color: '#7c3aed' }, // purple
+      { label: 'Action Taken:', color: '#059669' }, // green
+      { label: 'Results:', color: '#0891b2' }, // cyan
+      { label: 'Implementation steps:', color: '#9333ea' }, // violet
+      { label: 'Data needs:', color: '#7c2d12' }, // orange
+      { label: 'Tools:', color: '#1e40af' }, // dark blue
+      { label: 'People aspect:', color: '#7c3aed' }, // purple
+      { label: 'Match score:', color: '#059669' }, // green
+      { label: 'How AI Was Applied:', color: '#2563eb' },
+      { label: 'Continuous Learning:', color: '#7c3aed' },
+      { label: 'Outcome:', color: '#059669' }
     ];
     
-    // Split text into parts and reconstruct with bold formatting
     let formattedText = text;
     
-    patterns.forEach(pattern => {
-      const regex = new RegExp(`(${pattern})`, 'gi');
-      formattedText = formattedText.replace(regex, '<strong>$1</strong>');
+    sections.forEach(section => {
+      // Match the label followed by content (everything until next label or end)
+      const regex = new RegExp(`(${section.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      formattedText = formattedText.replace(regex, `<strong style="color: ${section.color}; display: block; margin-top: 8px; margin-bottom: 4px; font-size: 0.95em;">$1</strong>`);
     });
+    
+    // Add line breaks where appropriate
+    formattedText = formattedText.replace(/\. ([A-Z])/g, '.<br/><br/>$1');
     
     return formattedText;
   };
@@ -1089,8 +1196,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                                   {aiCase.dataQuantitative && (
                                     <div>
                                       <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Quantitative):</span>
-                                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                        <p className="text-blue-800 text-sm">{aiCase.dataQuantitative}</p>
+                                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <div 
+                                          className="text-blue-800 text-sm leading-relaxed"
+                                          style={{ lineHeight: '1.7' }}
+                                          dangerouslySetInnerHTML={{ __html: formatListItems(aiCase.dataQuantitative) }}
+                                        />
                                       </div>
                                     </div>
                                   )}
@@ -1098,8 +1209,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                                   {aiCase.dataQualitative && (
                                     <div>
                                       <span className="text-sm font-medium text-gray-500 block mb-2">Data Needs (Qualitative):</span>
-                                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-                                        <p className="text-indigo-800 text-sm">{aiCase.dataQualitative}</p>
+                                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                                        <div 
+                                          className="text-indigo-800 text-sm leading-relaxed"
+                                          style={{ lineHeight: '1.7' }}
+                                          dangerouslySetInnerHTML={{ __html: formatListItems(aiCase.dataQualitative) }}
+                                        />
                                       </div>
                                     </div>
                                   )}
@@ -1109,8 +1224,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 {aiCase.exampleSources && (
                                   <div className="mb-4">
                                     <span className="text-sm font-medium text-gray-500 block mb-2">Example Sources:</span>
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                      <p className="text-green-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.exampleSources}</p>
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                      <div 
+                                        className="text-green-800 text-sm leading-relaxed"
+                                        style={{ lineHeight: '1.7' }}
+                                        dangerouslySetInnerHTML={{ __html: formatListItems(aiCase.exampleSources) }}
+                                      />
                                     </div>
                                   </div>
                                 )}
@@ -1119,8 +1238,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 {aiCase.dataAvailabilityNotes && (
                                   <div className="mb-4">
                                     <span className="text-sm font-medium text-gray-500 block mb-2">Data Availability Notes:</span>
-                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                      <p className="text-purple-800 text-sm leading-relaxed whitespace-pre-wrap">{aiCase.dataAvailabilityNotes}</p>
+                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                      <div 
+                                        className="text-purple-800 text-sm leading-relaxed"
+                                        style={{ lineHeight: '1.7' }}
+                                        dangerouslySetInnerHTML={{ __html: formatListItems(aiCase.dataAvailabilityNotes) }}
+                                      />
                                     </div>
                                   </div>
                                 )}
@@ -1143,10 +1266,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 {aiCase.implementationNotes && (
                                   <div className="mb-4">
                                     <span className="text-sm font-medium text-gray-500 block mb-2">Notes on Implementation:</span>
-                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                      <p className="text-yellow-800 text-sm leading-relaxed whitespace-pre-wrap">
-                                        {aiCase.implementationNotes}
-                                      </p>
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                      <div 
+                                        className="text-yellow-800 text-sm leading-relaxed"
+                                        style={{ lineHeight: '1.7' }}
+                                        dangerouslySetInnerHTML={{ __html: formatListItems(aiCase.implementationNotes) }}
+                                      />
                                     </div>
                                   </div>
                                 )}
@@ -1221,7 +1346,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                                         </div>
                                         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 group-hover:shadow-lg transition-shadow duration-300">
                                           <div 
-                                            className="text-sm text-blue-800 leading-relaxed space-y-3"
+                                            className="text-sm text-blue-800 leading-relaxed space-y-4"
+                                            style={{
+                                              lineHeight: '1.8',
+                                              fontSize: '0.95rem'
+                                            }}
                                             dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 1']) }}
                                           />
                                         </div>
@@ -1242,7 +1371,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                                         </div>
                                         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200 group-hover:shadow-lg transition-shadow duration-300">
                                           <div 
-                                            className="text-sm text-emerald-800 leading-relaxed space-y-3"
+                                            className="text-sm text-emerald-800 leading-relaxed space-y-4"
+                                            style={{
+                                              lineHeight: '1.8',
+                                              fontSize: '0.95rem'
+                                            }}
                                             dangerouslySetInnerHTML={{ __html: formatTextWithBoldHeadings(useCase['Real Project 2']) }}
                                           />
                                         </div>
@@ -1278,7 +1411,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8 px-2">
+                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8 px-2 flex-wrap">
+                  <button
+                    onClick={downloadStrategy}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download (JSON)
+                  </button>
+                  <button
+                    onClick={downloadStrategyAsCSV}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download (CSV)
+                  </button>
                   <button
                     onClick={() => {
                       setActiveTab('identification');
