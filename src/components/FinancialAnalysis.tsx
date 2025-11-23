@@ -667,6 +667,130 @@ const FinancialAnalysis: React.FC = () => {
         yPosition += 5;
       });
 
+      // Add Comparison Section - New Page
+      if (canShowComparison) {
+        pdf.addPage();
+        yPosition = 15;
+
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 51, 102);
+        pdf.text('CURRENT VS FUTURE STATE COMPARISON', 15, yPosition);
+        yPosition += 8;
+
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+
+        const comparison = generateComparisonData();
+
+        // Cost Comparison
+        pdf.setFont('', 'bold');
+        pdf.text('Cost Analysis Comparison:', 15, yPosition);
+        yPosition += 5;
+        pdf.setFont('', 'normal');
+
+        const costComparisonInfo = [
+          `Current Monthly Cost: $${comparison.costs.current.toLocaleString()}`,
+          `Future Monthly Cost: $${comparison.costs.future.toLocaleString()}`,
+          `Monthly Saving: $${comparison.costs.saving.toLocaleString()} (${comparison.costs.savingPercentage.toFixed(1)}% reduction)`
+        ];
+
+        costComparisonInfo.forEach(info => {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+          pdf.text(wrappedText, 20, yPosition);
+          yPosition += 5;
+        });
+
+        yPosition += 3;
+
+        // Quality Comparison
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        pdf.setFont('', 'bold');
+        pdf.text('Quality Improvement Comparison:', 15, yPosition);
+        yPosition += 5;
+        pdf.setFont('', 'normal');
+
+        const qualityComparisonInfo = [
+          `Current Defect Rate: ${comparison.quality.currentDefect}%`,
+          `Future Defect Rate: ${comparison.quality.futureDefect}%`,
+          `Improvement: -${comparison.quality.improvement.toFixed(1)}%`,
+          `Monthly Saving: $${comparison.quality.monthlySaving.toLocaleString()}`
+        ];
+
+        qualityComparisonInfo.forEach(info => {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+          pdf.text(wrappedText, 20, yPosition);
+          yPosition += 5;
+        });
+
+        yPosition += 3;
+
+        // Efficiency Comparison
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        pdf.setFont('', 'bold');
+        pdf.text('Efficiency Improvement Comparison:', 15, yPosition);
+        yPosition += 5;
+        pdf.setFont('', 'normal');
+
+        const efficiencyComparisonInfo = [
+          `Current Units/Month: ${comparison.efficiency.currentUnits.toLocaleString()}`,
+          `Future Units/Month: ${comparison.efficiency.futureUnits.toLocaleString()}`,
+          `Additional Units: +${comparison.efficiency.improvement.toLocaleString()} (${comparison.efficiency.improvementPercentage.toFixed(1)}% increase)`,
+          `Monthly Saving: $${comparison.efficiency.monthlySaving.toLocaleString()}`
+        ];
+
+        efficiencyComparisonInfo.forEach(info => {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+          pdf.text(wrappedText, 20, yPosition);
+          yPosition += 5;
+        });
+
+        yPosition += 3;
+
+        // Overall Financial Impact & ROI
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        pdf.setFont('', 'bold');
+        pdf.text('Overall Financial Impact & ROI:', 15, yPosition);
+        yPosition += 5;
+        pdf.setFont('', 'normal');
+
+        const roiComparisonInfo = [
+          `Total Annual Benefit: $${comparison.consolidated.totalBenefit.toLocaleString()}`,
+          `ROI: ${comparison.consolidated.roi.toFixed(1)}%`,
+          `Payback Period: ${comparison.consolidated.paybackYears.toFixed(1)} years (${comparison.consolidated.paybackMonths.toFixed(0)} months)`
+        ];
+
+        roiComparisonInfo.forEach(info => {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+          pdf.text(wrappedText, 20, yPosition);
+          yPosition += 5;
+        });
+      }
+
       // Save the PDF
       pdf.save(`Financial_Analysis_${new Date().getTime()}.pdf`);
     } catch (error) {
