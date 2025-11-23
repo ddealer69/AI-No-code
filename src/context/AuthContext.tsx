@@ -11,6 +11,7 @@ const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 interface AuthContextType {
   user: User | null;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string, name: string) => Promise<boolean>;
   logout: () => void;
@@ -21,12 +22,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     // Check Supabase for user
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('id, email, first_name, last_name, password')
+      .select('id, email, first_name, last_name, password, is_admin')
       .eq('email', email)
       .single();
 
@@ -38,6 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return false;
     }
     setUser({ id: profile.id, email: profile.email, name: profile.first_name + ' ' + profile.last_name });
+    setIsAdmin(profile.is_admin || false);
     return true;
   };
 
@@ -73,10 +76,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
+    setIsAdmin(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

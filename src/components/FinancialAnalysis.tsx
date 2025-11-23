@@ -297,50 +297,6 @@ const FinancialAnalysis: React.FC = () => {
 
   const canShowComparison = hasCurrentData() && hasFutureData();
 
-  // Helper function to add text with bold keywords in PDF
-  const addBoldFormattedText = (pdf: any, text: string, x: number, startY: number, maxWidth: number, pageHeight: number) => {
-    const boldTerms = ['Total Annual Benefit:', 'ROI:', 'Payback Period:', 'Monthly Saving:', 'Yearly Saving:', 'Net Monthly Saving:', 'Total Monthly Cost:', 'Defect Rate:', 'Improvement:', 'Units Processed:', 'Additional Units:'];
-    
-    const lines = text.split('\n');
-    let currentY = startY;
-    
-    lines.forEach((line: string) => {
-      if (currentY > pageHeight - 15) {
-        pdf.addPage();
-        currentY = 15;
-      }
-
-      let isBoldLine = false;
-      for (const term of boldTerms) {
-        if (line.trim().includes(term)) {
-          isBoldLine = true;
-          break;
-        }
-      }
-
-      const wrappedLines = pdf.splitTextToSize(line.trim(), maxWidth);
-      wrappedLines.forEach((wrappedLine: string, index: number) => {
-        if (currentY > pageHeight - 15) {
-          pdf.addPage();
-          currentY = 15;
-        }
-
-        if (index === 0 && isBoldLine) {
-          pdf.setFont('', 'bold');
-        } else {
-          pdf.setFont('', 'normal');
-        }
-
-        pdf.text(wrappedLine, x, currentY);
-        currentY += 5;
-      });
-
-      currentY += 2;
-    });
-
-    return { finalY: currentY };
-  };
-
   // Download financial analysis as PDF
   const downloadFinancialAnalysisPDF = async () => {
     try {

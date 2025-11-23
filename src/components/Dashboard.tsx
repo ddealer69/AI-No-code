@@ -8,6 +8,7 @@ import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
 import supabase, { saveStrategyData, processAIUseCases } from '../utils/supabaseClient';
 import { searchRealCasesInCSV, loadCSVContent } from '../utils/csvRealCasesService';
+import { useAuth } from '../context/AuthContext';
 
 interface DashboardProps {
   onGenerateStrategy: (response: StrategyResponse) => void;
@@ -27,9 +28,11 @@ const Dashboard: React.FC<DashboardProps> = ({
   realUseCasesData: propRealUseCasesData = []
 }) => {
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials' | 'roi'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials' | 'roi' | 'admin'>(initialTab);
   // ROI Calculator state
   const [showROICalculator, setShowROICalculator] = useState(false);
+  // Get admin status from auth context
+  const { isAdmin } = useAuth();
   // Strategy data state
   const [generatedStrategy, setGeneratedStrategy] = useState<StrategyResponse | null>(null);
   // Metric filter state for implementation tab
@@ -1222,6 +1225,20 @@ const Dashboard: React.FC<DashboardProps> = ({
             >
               Financials
             </button>
+
+            {/* Admin Tab - Only show for admins */}
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] ${
+                  activeTab === 'admin'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } transition-colors duration-200`}
+              >
+                Admin
+              </button>
+            )}
           </nav>
         </div>
 
@@ -1923,6 +1940,53 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <Calculator className="w-5 h-5" />
                   Launch ROI Calculator
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'admin' && isAdmin && (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-serif leading-tight">Admin Panel</h2>
+            <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Administrative Controls and Settings</p>
+            <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
+              <div className="flex items-center">
+                <div className="flex items-center">
+                  <div>
+                    <h3 className="text-2xl font-bold">Admin Dashboard</h3>
+                    <p className="text-red-100 mt-2">Hey this is admin</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Administrative Features</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-lg border border-red-200">
+                    <h5 className="font-semibold text-gray-800 mb-2">User Management</h5>
+                    <p className="text-sm text-gray-600">Manage users and permissions</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-red-200">
+                    <h5 className="font-semibold text-gray-800 mb-2">System Settings</h5>
+                    <p className="text-sm text-gray-600">Configure system parameters</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-red-200">
+                    <h5 className="font-semibold text-gray-800 mb-2">Reports</h5>
+                    <p className="text-sm text-gray-600">View analytics and reports</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-red-200">
+                    <h5 className="font-semibold text-gray-800 mb-2">Audit Logs</h5>
+                    <p className="text-sm text-gray-600">Review system activity logs</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
