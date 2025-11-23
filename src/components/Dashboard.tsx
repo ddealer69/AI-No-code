@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, TrendingUp, Filter, Globe, MapPin, Lightbulb, Download, Calculator } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { REAL_USE_CASES } from '../data/demoData';
 import AIROICalculator from './AIROICalculator';
 import FinancialAnalysis from './FinancialAnalysis';
@@ -13,7 +14,7 @@ interface DashboardProps {
   onStartAnalysis: () => void;
   onStartFutureAnalysis?: () => void;
   onSectorChange?: (sector: string) => void;
-  initialTab?: 'identification' | 'implementation' | 'financials' | 'roi';
+  initialTab?: 'identification' | 'implementation'   | 'financials' | 'roi';
   realUseCasesData?: any[];
 }
 
@@ -253,27 +254,325 @@ const Dashboard: React.FC<DashboardProps> = ({
     setFilters({ sector: '', domain: '', process: '', stage: '' });
   };
 
-  // Download strategy as JSON
-  const downloadStrategy = () => {
+  // Download strategy as PDF
+  const downloadStrategyAsPDF = async () => {
     if (!generatedStrategy) return;
 
-    const dataToDownload = {
-      generatedAt: new Date().toISOString(),
-      filters: filters,
-      strategy: generatedStrategy,
-      realUseCases: realUseCasesData
-    };
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-    const jsonString = JSON.stringify(dataToDownload, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `AI-Strategy-${filters.sector}-${filters.domain}-${new Date().getTime()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 15;
+
+      // Load JPG logo and add it to PDF
+      try {
+        const response = await fetch('/images/IMG-20250912-WA0002.jpg');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        
+        await new Promise((resolve) => {
+          reader.onload = (e: any) => {
+            try {
+              const logoDataUrl = e.target.result;
+              pdf.addImage(logoDataUrl, 'JPEG', 15, 8, 20, 12);
+              resolve(true);
+            } catch (err) {
+              console.warn('Error adding logo to PDF:', err);
+              resolve(false);
+            }
+          };
+          reader.readAsDataURL(blob);
+        });
+      } catch (logoError) {
+        console.warn('Could not load logo:', logoError);
+      }
+      
+      // Add AI4Profit text on the right
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('AI4Profit', pageWidth - 40, 15);
+
+      // Add a line separator
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(15, 25, pageWidth - 15, 25);
+
+      yPosition = 32;
+
+      // Title
+      pdf.setFontSize(18);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('AI STRATEGY REPORT', 15, yPosition);
+      yPosition += 10;
+
+      // Metadata
+      pdf.setFontSize(10);
+      pdf.setTextColor(80, 80, 80);
+      
+      const metadata = [
+        `Generated: ${new Date().toLocaleString()}`,
+        `Sector: ${filters.sector}`,
+        `Domain: ${filters.domain}`,
+        `Functional Area: ${filters.process}`,
+        `Job Role: ${filters.stage}`
+      ];
+
+      metadata.forEach(line => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        pdf.text(line, 15, yPosition);
+        yPosition += 6;
+      });
+
+      yPosition += 5;
+
+      // Matched Use Cases Section
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('MATCHED BUSINESS USE CASES', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+
+      Object.entries(generatedStrategy.matchedUseCases).forEach(([key, useCase]: [string, any]) => {
+        if (yPosition > pageHeight - 30) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+
+        pdf.setFont('', 'bold');
+        pdf.text(`Use Case ${key}:`, 15, yPosition);
+        yPosition += 6;
+
+        pdf.setFont('', 'normal');
+        const caseInfo = [
+          `Business Process: ${useCase.businessProcess}`,
+          `Functional Area: ${useCase.functionalAreas?.[0] || 'N/A'}`,
+          `Job Role: ${useCase.jobRole}`,
+          `Primary Metric: ${useCase.primaryMetric}`,
+          `Secondary Metric: ${useCase.secondaryMetric}`,
+          `AI Use Case: ${useCase.aiUseCase}`,
+          `Impact: ${useCase.impact}`,
+          `Expected ROI: ${useCase.expectedROI}`
+        ];
+
+        caseInfo.forEach(info => {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+          pdf.text(wrappedText, 20, yPosition);
+          yPosition += 5;
+        });
+
+        yPosition += 3;
+      });
+
+      // Add page break before AI Implementation Details
+      pdf.addPage();
+      yPosition = 15;
+
+      // AI Implementation Details Section
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('AI IMPLEMENTATION DETAILS', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+
+      Object.entries(generatedStrategy.aiUseCases).forEach(([key, aiCase]: [string, any]) => {
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+
+        pdf.setFont('', 'bold');
+        pdf.text(`AI Implementation ${key}:`, 15, yPosition);
+        yPosition += 6;
+
+        pdf.setFont('', 'normal');
+        
+        const aiInfo = [
+          `Use Case: ${aiCase.useCase}`,
+          `AI System Type: ${aiCase.aiSystemType}`,
+          `Custom Development Needed: ${aiCase.customDev ? 'Yes' : 'No'}`,
+          `Recommended Tools/Platforms: ${aiCase.tools?.join(', ') || 'N/A'}`
+        ];
+
+        aiInfo.forEach(info => {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+          pdf.text(wrappedText, 20, yPosition);
+          yPosition += 5;
+        });
+
+        // Data Needs
+        if (aiCase.dataQuantitative) {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          pdf.setFont('', 'bold');
+          pdf.text('Data Needs (Quantitative):', 20, yPosition);
+          yPosition += 5;
+          pdf.setFont('', 'normal');
+          const quantWrapped = pdf.splitTextToSize(aiCase.dataQuantitative, pageWidth - 35);
+          pdf.text(quantWrapped, 25, yPosition);
+          yPosition += quantWrapped.length * 4;
+        }
+
+        if (aiCase.dataQualitative) {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          pdf.setFont('', 'bold');
+          pdf.text('Data Needs (Qualitative):', 20, yPosition);
+          yPosition += 5;
+          pdf.setFont('', 'normal');
+          const qualWrapped = pdf.splitTextToSize(aiCase.dataQualitative, pageWidth - 35);
+          pdf.text(qualWrapped, 25, yPosition);
+          yPosition += qualWrapped.length * 4;
+        }
+
+        if (aiCase.exampleSources) {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          pdf.setFont('', 'bold');
+          pdf.text('Example Sources:', 20, yPosition);
+          yPosition += 5;
+          pdf.setFont('', 'normal');
+          const sourcesWrapped = pdf.splitTextToSize(aiCase.exampleSources, pageWidth - 35);
+          pdf.text(sourcesWrapped, 25, yPosition);
+          yPosition += sourcesWrapped.length * 4;
+        }
+
+        if (aiCase.dataAvailabilityNotes) {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          pdf.setFont('', 'bold');
+          pdf.text('Data Availability Notes:', 20, yPosition);
+          yPosition += 5;
+          pdf.setFont('', 'normal');
+          const notesWrapped = pdf.splitTextToSize(aiCase.dataAvailabilityNotes, pageWidth - 35);
+          pdf.text(notesWrapped, 25, yPosition);
+          yPosition += notesWrapped.length * 4;
+        }
+
+        if (aiCase.implementationNotes) {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+          pdf.setFont('', 'bold');
+          pdf.text('Implementation Notes:', 20, yPosition);
+          yPosition += 5;
+          pdf.setFont('', 'normal');
+          const implWrapped = pdf.splitTextToSize(aiCase.implementationNotes, pageWidth - 35);
+          pdf.text(implWrapped, 25, yPosition);
+          yPosition += implWrapped.length * 4;
+        }
+
+        yPosition += 5;
+      });
+
+      // Add page break before Real World Implementation Examples
+      if (realUseCasesData && realUseCasesData.length > 0) {
+        pdf.addPage();
+        yPosition = 15;
+
+        // Real World Implementation Examples Section
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 51, 102);
+        pdf.text('REAL WORLD IMPLEMENTATION EXAMPLES', 15, yPosition);
+        yPosition += 8;
+
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+
+        realUseCasesData.forEach((realCase: any, index: number) => {
+          if (yPosition > pageHeight - 40) {
+            pdf.addPage();
+            yPosition = 15;
+          }
+
+          pdf.setFont('', 'bold');
+          pdf.text(`Example ${index + 1}:`, 15, yPosition);
+          yPosition += 6;
+
+          pdf.setFont('', 'normal');
+          
+          // Business Overview
+          if (realCase.BP) {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage();
+              yPosition = 15;
+            }
+            pdf.setFont('', 'bold');
+            pdf.text('Business Overview:', 15, yPosition);
+            yPosition += 5;
+            pdf.setFont('', 'normal');
+            const bpWrapped = pdf.splitTextToSize(realCase.BP, pageWidth - 30);
+            pdf.text(bpWrapped, 20, yPosition);
+            yPosition += bpWrapped.length * 4;
+          }
+
+          // Real Project 1
+          if (realCase['Real Project 1']) {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage();
+              yPosition = 15;
+            }
+            pdf.setFont('', 'bold');
+            pdf.text('Global Implementation:', 15, yPosition);
+            yPosition += 5;
+            pdf.setFont('', 'normal');
+            const proj1Text = realCase['Real Project 1'];
+            const proj1Lines = addBoldFormattedText(pdf, proj1Text, 20, yPosition, pageWidth - 30, pageHeight);
+            yPosition = proj1Lines.finalY;
+          }
+
+          // Real Project 2
+          if (realCase['Real Project 2']) {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage();
+              yPosition = 15;
+            }
+            pdf.setFont('', 'bold');
+            pdf.text('Regional Implementation:', 15, yPosition);
+            yPosition += 5;
+            pdf.setFont('', 'normal');
+            const proj2Text = realCase['Real Project 2'];
+            const proj2Lines = addBoldFormattedText(pdf, proj2Text, 20, yPosition, pageWidth - 30, pageHeight);
+            yPosition = proj2Lines.finalY;
+          }
+
+          yPosition += 5;
+        });
+      }
+
+      // Save the PDF
+      pdf.save(`AI-Strategy-${filters.sector}-${filters.domain}-${new Date().getTime()}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
   };
 
   // Download strategy as CSV
@@ -322,6 +621,22 @@ const Dashboard: React.FC<DashboardProps> = ({
       csvContent += row + '\n';
     });
 
+    // Add Real World Implementation Examples section
+    if (realUseCasesData && realUseCasesData.length > 0) {
+      csvContent += "\n\nREAL WORLD IMPLEMENTATION EXAMPLES\n";
+      csvContent += "Example Number,Business Overview,Global Implementation,Regional Implementation\n";
+      
+      realUseCasesData.forEach((realCase: any, index: number) => {
+        const row = [
+          `"Example ${index + 1}"`,
+          `"${realCase.BP || ''}"`,
+          `"${realCase['Real Project 1'] || ''}"`,
+          `"${realCase['Real Project 2'] || ''}"`
+        ].join(',');
+        csvContent += row + '\n';
+      });
+    }
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -346,6 +661,51 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
     
     return formatted;
+  };
+
+  // Helper function to add text with bold keywords in PDF
+  const addBoldFormattedText = (pdf: any, text: string, x: number, startY: number, maxWidth: number, pageHeight: number) => {
+    const boldTerms = ['Challenge:', 'AI Approach:', 'Discovery:', 'Action Taken:', 'Results:', 'Implementation steps:', 'Data needs:', 'Tools:', 'People aspect:', 'Match score:', 'Continuous Learning:', 'How AI Was Applied:', 'Outcome:'];
+    
+    // Split text into sentences and process each
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    let currentY = startY;
+    
+    sentences.forEach((sentence: string) => {
+      if (currentY > pageHeight - 15) {
+        pdf.addPage();
+        currentY = 15;
+      }
+
+      let isBoldTerm = false;
+      for (const term of boldTerms) {
+        if (sentence.trim().startsWith(term)) {
+          isBoldTerm = true;
+          break;
+        }
+      }
+
+      const wrappedLines = pdf.splitTextToSize(sentence.trim(), maxWidth);
+      wrappedLines.forEach((line: string, index: number) => {
+        if (currentY > pageHeight - 15) {
+          pdf.addPage();
+          currentY = 15;
+        }
+
+        if (index === 0 && isBoldTerm) {
+          pdf.setFont('', 'bold');
+        } else {
+          pdf.setFont('', 'normal');
+        }
+
+        pdf.text(line, x, currentY);
+        currentY += 5;
+      });
+
+      currentY += 2;
+    });
+
+    return { finalY: currentY };
   };
 
   const formatTextWithBoldHeadings = (text: string) => {
@@ -1413,11 +1773,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8 px-2 flex-wrap">
                   <button
-                    onClick={downloadStrategy}
+                    onClick={downloadStrategyAsPDF}
                     className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Download (JSON)
+                    Download (PDF)
                   </button>
                   <button
                     onClick={downloadStrategyAsCSV}

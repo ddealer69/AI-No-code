@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Download, Calculator, DollarSign, TrendingUp } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 // TypeScript interfaces for type safety
 interface ProcessInstance {
@@ -295,6 +296,384 @@ const FinancialAnalysis: React.FC = () => {
   };
 
   const canShowComparison = hasCurrentData() && hasFutureData();
+
+  // Helper function to add text with bold keywords in PDF
+  const addBoldFormattedText = (pdf: any, text: string, x: number, startY: number, maxWidth: number, pageHeight: number) => {
+    const boldTerms = ['Total Annual Benefit:', 'ROI:', 'Payback Period:', 'Monthly Saving:', 'Yearly Saving:', 'Net Monthly Saving:', 'Total Monthly Cost:', 'Defect Rate:', 'Improvement:', 'Units Processed:', 'Additional Units:'];
+    
+    const lines = text.split('\n');
+    let currentY = startY;
+    
+    lines.forEach((line: string) => {
+      if (currentY > pageHeight - 15) {
+        pdf.addPage();
+        currentY = 15;
+      }
+
+      let isBoldLine = false;
+      for (const term of boldTerms) {
+        if (line.trim().includes(term)) {
+          isBoldLine = true;
+          break;
+        }
+      }
+
+      const wrappedLines = pdf.splitTextToSize(line.trim(), maxWidth);
+      wrappedLines.forEach((wrappedLine: string, index: number) => {
+        if (currentY > pageHeight - 15) {
+          pdf.addPage();
+          currentY = 15;
+        }
+
+        if (index === 0 && isBoldLine) {
+          pdf.setFont('', 'bold');
+        } else {
+          pdf.setFont('', 'normal');
+        }
+
+        pdf.text(wrappedLine, x, currentY);
+        currentY += 5;
+      });
+
+      currentY += 2;
+    });
+
+    return { finalY: currentY };
+  };
+
+  // Download financial analysis as PDF
+  const downloadFinancialAnalysisPDF = async () => {
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 15;
+
+      // Load JPG logo and add it to PDF
+      try {
+        const response = await fetch('/images/IMG-20250912-WA0002.jpg');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        
+        await new Promise((resolve) => {
+          reader.onload = (e: any) => {
+            try {
+              const logoDataUrl = e.target.result;
+              pdf.addImage(logoDataUrl, 'JPEG', 15, 8, 20, 12);
+              resolve(true);
+            } catch (err) {
+              console.warn('Error adding logo to PDF:', err);
+              resolve(false);
+            }
+          };
+          reader.readAsDataURL(blob);
+        });
+      } catch (logoError) {
+        console.warn('Could not load logo:', logoError);
+      }
+      
+      // Add AI4Profit text on the right
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('AI4Profit', pageWidth - 40, 15);
+
+      // Add a line separator
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(15, 25, pageWidth - 15, 25);
+
+      yPosition = 32;
+
+      // Title
+      pdf.setFontSize(18);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('FINANCIAL ANALYSIS REPORT', 15, yPosition);
+      yPosition += 10;
+
+      // Metadata
+      pdf.setFontSize(10);
+      pdf.setTextColor(80, 80, 80);
+      
+      const timestamp = new Date().toLocaleString();
+      const metadata = [
+        `Generated: ${timestamp}`
+      ];
+
+      metadata.forEach(line => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        pdf.text(line, 15, yPosition);
+        yPosition += 6;
+      });
+
+      yPosition += 5;
+
+      // Current State Section
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('CURRENT STATE ANALYSIS', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+
+      // Cost Reduction - Current
+      pdf.setFont('', 'bold');
+      pdf.text('Cost Reduction from Automation:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      data.current.costReduction.processInstances.forEach((instance, index) => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const costInfo = `Instance ${index + 1}: Labour: $${instance.labour}, Other Direct: $${instance.otherDirectCost}, Factory OH: $${instance.factoryOverheads}, Sales OH: $${instance.salesOverheads}, Admin OH: $${instance.adminOverheads}`;
+        const wrappedText = pdf.splitTextToSize(costInfo, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += wrappedText.length * 4;
+      });
+
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 15;
+      }
+      pdf.setFont('', 'bold');
+      pdf.text(`Other Fixed Cost: $${data.current.costReduction.otherFixedCostPerMonth}`, 20, yPosition);
+      yPosition += 5;
+      pdf.text(`Total Monthly Cost: $${calculateTotalMonthlyCost(data.current)}`, 20, yPosition);
+      yPosition += 8;
+      pdf.setFont('', 'normal');
+
+      // Quality Defect - Current
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 15;
+      }
+      pdf.setFont('', 'bold');
+      pdf.text('Quality Defect Reduction:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      const qualityCurrentInfo = [
+        `Units Processed: ${data.current.qualityDefect.unitsProcessed}`,
+        `Defect Rate: ${data.current.qualityDefect.defectPercentage}%`,
+        `Per Unit Cost: $${data.current.qualityDefect.perUnitCost}`,
+        `Monthly Saving: $${calculateQualityDefectSaving()}`
+      ];
+
+      qualityCurrentInfo.forEach(info => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += 5;
+      });
+
+      yPosition += 3;
+
+      // Efficiency - Current
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 15;
+      }
+      pdf.setFont('', 'bold');
+      pdf.text('Efficiency Improvement:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      const efficiencyCurrentInfo = [
+        `Units Processed: ${data.current.efficiency.unitsProcessedBefore}`,
+        `Contribution per Unit: $${data.current.efficiency.contributionPerUnit}`,
+        `Monthly Saving: $${calculateEfficiencySaving()}`
+      ];
+
+      efficiencyCurrentInfo.forEach(info => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += 5;
+      });
+
+      yPosition += 5;
+
+      // Future State Section - New Page
+      pdf.addPage();
+      yPosition = 15;
+
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('FUTURE STATE ANALYSIS', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+
+      // Cost Reduction - Future
+      pdf.setFont('', 'bold');
+      pdf.text('Cost Reduction from Automation:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      data.future.costReduction.processInstances.forEach((instance, index) => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const costInfo = `Instance ${index + 1}: Labour: $${instance.labour}, Other Direct: $${instance.otherDirectCost}, Factory OH: $${instance.factoryOverheads}, Sales OH: $${instance.salesOverheads}, Admin OH: $${instance.adminOverheads}`;
+        const wrappedText = pdf.splitTextToSize(costInfo, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += wrappedText.length * 4;
+      });
+
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 15;
+      }
+      pdf.setFont('', 'bold');
+      pdf.text(`Other Fixed Cost: $${data.future.costReduction.otherFixedCostPerMonth}`, 20, yPosition);
+      yPosition += 5;
+      pdf.text(`Total Monthly Cost: $${calculateTotalMonthlyCost(data.future)}`, 20, yPosition);
+      yPosition += 8;
+      pdf.setFont('', 'normal');
+
+      // Quality Defect - Future
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 15;
+      }
+      pdf.setFont('', 'bold');
+      pdf.text('Quality Defect Reduction:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      const qualityFutureInfo = [
+        `Units Processed: ${data.future.qualityDefect.unitsProcessed}`,
+        `Defect Rate: ${data.future.qualityDefect.defectPercentage}%`,
+        `Per Unit Cost: $${data.future.qualityDefect.perUnitCost}`,
+        `Special Deduction: $${data.future.qualityDefect.specialDeduction}`
+      ];
+
+      qualityFutureInfo.forEach(info => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += 5;
+      });
+
+      yPosition += 3;
+
+      // Efficiency - Future
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 15;
+      }
+      pdf.setFont('', 'bold');
+      pdf.text('Efficiency Improvement:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      const efficiencyFutureInfo = [
+        `Units Processed: ${data.future.efficiency.unitsProcessedAfter}`,
+        `Contribution per Unit: $${data.future.efficiency.contributionPerUnit}`,
+        `Additional Cost: $${data.future.efficiency.additionalCost}`,
+        `Monthly Saving: $${calculateEfficiencySaving()}`
+      ];
+
+      efficiencyFutureInfo.forEach(info => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += 5;
+      });
+
+      yPosition += 5;
+
+      // Automation Metrics Section - New Page
+      pdf.addPage();
+      yPosition = 15;
+
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('AUTOMATION INVESTMENT METRICS', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+
+      pdf.setFont('', 'bold');
+      pdf.text('Investment Details:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      const investmentInfo = [
+        `OPEX of Automation: $${data.current.automationMetrics.opexAutomation}`,
+        `CAPEX of Automation: $${data.current.automationMetrics.capexAutomation}`,
+        `Total Investment: $${data.current.automationMetrics.opexAutomation + data.current.automationMetrics.capexAutomation}`
+      ];
+
+      investmentInfo.forEach(info => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += 5;
+      });
+
+      yPosition += 5;
+
+      // Consolidated Metrics
+      pdf.setFont('', 'bold');
+      pdf.text('Consolidated ROI Metrics:', 15, yPosition);
+      yPosition += 5;
+      pdf.setFont('', 'normal');
+
+      const consolidatedMetrics = calculateConsolidatedMetrics();
+      const consolidatedInfo = [
+        `Cost Reduction Yearly Saving: $${consolidatedMetrics.costSavingYearly.toLocaleString()}`,
+        `Quality Defect Yearly Saving: $${consolidatedMetrics.qualitySavingYearly.toLocaleString()}`,
+        `Efficiency Yearly Saving: $${consolidatedMetrics.efficiencySavingYearly.toLocaleString()}`,
+        `Total Annual Benefit: $${consolidatedMetrics.totalBenefit.toLocaleString()}`,
+        `ROI: ${consolidatedMetrics.roi.toFixed(2)}%`,
+        `Payback Period: ${consolidatedMetrics.paybackYears.toFixed(2)} years (${consolidatedMetrics.paybackMonths.toFixed(1)} months)`
+      ];
+
+      consolidatedInfo.forEach(info => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 15;
+        }
+        const wrappedText = pdf.splitTextToSize(info, pageWidth - 30);
+        pdf.text(wrappedText, 20, yPosition);
+        yPosition += 5;
+      });
+
+      // Save the PDF
+      pdf.save(`Financial_Analysis_${new Date().getTime()}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
 
   // Generate comparison data
   const generateComparisonData = () => {
@@ -891,13 +1270,20 @@ const FinancialAnalysis: React.FC = () => {
         )}
 
         {/* Download Button */}
-        <div className="mt-8 flex justify-center">
+        <div className="mt-8 flex justify-center gap-4">
           <button
             onClick={downloadReport}
             className="flex items-center px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 font-semibold shadow-md transition-all"
           >
             <Download className="w-5 h-5 mr-2" />
-            Download Financial Analysis Report
+            Download Report (Text)
+          </button>
+          <button
+            onClick={downloadFinancialAnalysisPDF}
+            className="flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold shadow-md transition-all"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Download Report (PDF)
           </button>
         </div>
       </div>
