@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, RotateCcw, Sparkles, CheckCircle2, Target, TrendingUp, Filter, Globe, MapPin, Lightbulb, Download, Calculator } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { REAL_USE_CASES } from '../data/demoData';
-import AIROICalculator from './AIROICalculator';
+// import AIROICalculator from './AIROICalculator';
 import FinancialAnalysis from './FinancialAnalysis';
 import { FilterData, StrategyResponse } from '../types';
 import { saveToLocalStorage } from '../utils/jsonStorage';
@@ -15,7 +15,7 @@ interface DashboardProps {
   onStartAnalysis: () => void;
   onStartFutureAnalysis?: () => void;
   onSectorChange?: (sector: string) => void;
-  initialTab?: 'identification' | 'implementation'   | 'financials' | 'roi';
+  initialTab?: 'identification' | 'implementation' | 'financials';
   realUseCasesData?: any[];
 }
 
@@ -28,7 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   realUseCasesData: propRealUseCasesData = []
 }) => {
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials' | 'roi' | 'admin'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'identification' | 'implementation' | 'financials' | 'admin'>(initialTab);
   // ROI Calculator state
   const [showROICalculator, setShowROICalculator] = useState(false);
   // Get admin status from auth context
@@ -1201,20 +1201,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             >
               Implementation
             </button>
-            {/* ROI Calculator Tab */}
-            <button
-              onClick={() => setActiveTab('roi')}
-              className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] flex items-center gap-2 ${
-                activeTab === 'roi'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } transition-colors duration-200`}
-            >
-              <Calculator className="w-4 h-4" />
-              ROI Calculator
-            </button>
             
-            {/* Financials Tab */}
+            {/* ToI Calculator Tab */}
             <button
               onClick={() => setActiveTab('financials')}
               className={`py-3 px-2 border-b-2 font-medium text-lg min-h-[48px] ${
@@ -1223,7 +1211,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               } transition-colors duration-200`}
             >
-              Financials
+              RoI Calculator
             </button>
 
             {/* Admin Tab - Only show for admins */}
@@ -1816,7 +1804,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     onClick={() => setActiveTab('financials')}
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Proceed to Financial Analysis
+                    Proceed to ROI Calculator
                   </button>
                 </div>
               </div>
@@ -1841,109 +1829,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {activeTab === 'financials' && (
         <FinancialAnalysis />
-      )}
-
-      {activeTab === 'roi' && (
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-serif leading-tight">AI ROI Calculator</h2>
-            <p className="text-base sm:text-lg text-gray-600 font-medium tracking-wide">Calculate your AI transformation return on investment</p>
-            <div className="w-24 h-1 gold-accent mx-auto mt-4"></div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Calculator className="w-8 h-8 mr-3" />
-                  <div>
-                    <h3 className="text-xl font-bold">ROI Dashboard & Calculator</h3>
-                    <p className="text-blue-100">Comprehensive AI investment analysis tools</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowROICalculator(true)}
-                  className="bg-white/20 hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2 backdrop-blur-sm"
-                >
-                  <Calculator className="w-4 h-4" />
-                  Open Calculator
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6">
-              <div className="grid md:grid-cols-3 gap-6 mb-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">ROI Analysis</h4>
-                  <p className="text-sm text-gray-600">Calculate return on investment, payback period, and financial metrics</p>
-                </div>
-
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Target className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Process Analysis</h4>
-                  <p className="text-sm text-gray-600">Analyze current vs. future process efficiency and cost savings</p>
-                </div>
-
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Download className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Export Reports</h4>
-                  <p className="text-sm text-gray-600">Download comprehensive reports in multiple formats (CSV, PDF, HTML)</p>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Key Features</h4>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-gray-700">Real-time ROI calculations</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-gray-700">Process efficiency analysis</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-gray-700">Cost-benefit breakdown</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-gray-700">Investment payback timeline</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-gray-700">Executive summary reports</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-gray-700">CSV data export</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => setShowROICalculator(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 mx-auto"
-                >
-                  <Calculator className="w-5 h-5" />
-                  Launch ROI Calculator
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
       {activeTab === 'admin' && isAdmin && (
@@ -1994,11 +1879,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* ROI Calculator Modal */}
-      {showROICalculator && (
+      {/* {showROICalculator && (
         <AIROICalculator 
           onClose={() => setShowROICalculator(false)}
         />
-      )}
+      )} */}
     </div>
   </div>
   );

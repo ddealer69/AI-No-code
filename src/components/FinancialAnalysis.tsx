@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 
 // TypeScript interfaces for type safety
 interface ProcessInstance {
+  name?: string;
   labour: number;
   otherDirectCost: number;
   factoryOverheads: number;
@@ -35,11 +36,24 @@ interface AutomationMetrics {
   capexAutomation: number;
 }
 
+interface CustomField {
+  name: string;
+  value: number;
+}
+
+interface CustomSection {
+  id: string;
+  name: string;
+  fields: CustomField[];
+  formula: string; // Formula like "{field1} * {field2} + {field3}"
+}
+
 interface FinancialState {
   costReduction: CostReductionData;
   qualityDefect: QualityDefectData;
   efficiency: EfficiencyData;
   automationMetrics: AutomationMetrics;
+  customSections: CustomSection[];
 }
 
 interface CurrentFutureStates {
@@ -48,18 +62,29 @@ interface CurrentFutureStates {
 }
 
 const FinancialAnalysis: React.FC = () => {
-  const [activeAnalysis, setActiveAnalysis] = useState<'current' | 'future'>('current');
   const [expandedSections, setExpandedSections] = useState<string[]>(['costReduction']);
-  const [showComparison, setShowComparison] = useState(false);
+  const [showRoiSummary, setShowRoiSummary] = useState(false);
+  const [newInstanceName, setNewInstanceName] = useState('');
+  const [showAddInstanceModal, setShowAddInstanceModal] = useState(false);
+  const [addingInstanceType, setAddingInstanceType] = useState<'current' | 'future' | null>(null);
+  
+  // Custom section states
+  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
+  const [customSectionStep, setCustomSectionStep] = useState<'name' | 'fields' | 'formula'>('name');
+  const [tempSectionName, setTempSectionName] = useState('');
+  const [tempSectionFields, setTempSectionFields] = useState<{ name: string }[]>([]);
+  const [tempFieldName, setTempFieldName] = useState('');
+  const [tempFormula, setTempFormula] = useState('');
+  const [nextSectionId, setNextSectionId] = useState(1);
   
   const [data, setData] = useState<CurrentFutureStates>({
     current: {
       costReduction: {
         processInstances: [
-          { labour: 500, otherDirectCost: 500, factoryOverheads: 50, salesOverheads: 20, adminOverheads: 10 },
-          { labour: 500, otherDirectCost: 0, factoryOverheads: 30, salesOverheads: 20, adminOverheads: 10 },
-          { labour: 700, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 },
-          { labour: 850, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 }
+          { name: 'Instance 1', labour: 500, otherDirectCost: 500, factoryOverheads: 50, salesOverheads: 20, adminOverheads: 10 },
+          { name: 'Instance 2', labour: 500, otherDirectCost: 0, factoryOverheads: 30, salesOverheads: 20, adminOverheads: 10 },
+          { name: 'Instance 3', labour: 700, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 },
+          { name: 'Instance 4', labour: 850, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 }
         ],
         otherFixedCostPerMonth: 200000
       },
@@ -78,15 +103,16 @@ const FinancialAnalysis: React.FC = () => {
       automationMetrics: {
         opexAutomation: 1991000,
         capexAutomation: 1000000
-      }
+      },
+      customSections: []
     },
     future: {
       costReduction: {
         processInstances: [
-          { labour: 500, otherDirectCost: 0, factoryOverheads: 30, salesOverheads: 20, adminOverheads: 10 },
-          { labour: 500, otherDirectCost: 0, factoryOverheads: 30, salesOverheads: 20, adminOverheads: 10 },
-          { labour: 450, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 },
-          { labour: 0, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 }
+          { name: 'Instance 1', labour: 500, otherDirectCost: 0, factoryOverheads: 30, salesOverheads: 20, adminOverheads: 10 },
+          { name: 'Instance 2', labour: 500, otherDirectCost: 0, factoryOverheads: 30, salesOverheads: 20, adminOverheads: 10 },
+          { name: 'Instance 3', labour: 450, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 },
+          { name: 'Instance 4', labour: 0, otherDirectCost: 0, factoryOverheads: 0, salesOverheads: 0, adminOverheads: 0 }
         ],
         otherFixedCostPerMonth: 200000
       },
@@ -105,7 +131,8 @@ const FinancialAnalysis: React.FC = () => {
       automationMetrics: {
         opexAutomation: 1991000,
         capexAutomation: 1000000
-      }
+      },
+      customSections: []
     }
   });
 
@@ -151,7 +178,18 @@ const FinancialAnalysis: React.FC = () => {
     const qualitySavingYearly = calculateQualityDefectSaving() * 12 + data.future.qualityDefect.specialDeduction * 12;
     const efficiencySavingYearly = calculateEfficiencySaving() * 12;
     
-    const totalBenefit = costSavingYearly + qualitySavingYearly + efficiencySavingYearly;
+    // Calculate custom section benefits
+    const customSavingsYearly: { [key: string]: number } = {};
+    data.current.customSections.forEach(section => {
+      const currentValue = calculateCustomSectionValue(section);
+      const futureValue = calculateCustomSectionValue(
+        data.future.customSections.find(s => s.id === section.id)!
+      );
+      customSavingsYearly[section.name] = (currentValue - futureValue) * 12;
+    });
+    
+    const totalCustomSaving = Object.values(customSavingsYearly).reduce((sum, val) => sum + val, 0);
+    const totalBenefit = costSavingYearly + qualitySavingYearly + efficiencySavingYearly + totalCustomSaving;
     const totalInvestment = data.current.automationMetrics.opexAutomation + data.current.automationMetrics.capexAutomation;
     
     const roi = ((totalBenefit - totalInvestment) / totalInvestment) * 100;
@@ -162,6 +200,8 @@ const FinancialAnalysis: React.FC = () => {
       costSavingYearly,
       qualitySavingYearly,
       efficiencySavingYearly,
+      customSavingsYearly,
+      totalCustomSaving,
       totalBenefit,
       roi,
       paybackYears,
@@ -177,22 +217,199 @@ const FinancialAnalysis: React.FC = () => {
     );
   };
 
-  const updateData = (section: keyof FinancialState, field: string, value: any, index?: number) => {
+  const updateData = (section: keyof FinancialState, field: string, value: any, type: 'current' | 'future', index?: number) => {
     setData(prev => ({
       ...prev,
-      [activeAnalysis]: {
-        ...prev[activeAnalysis],
+      [type]: {
+        ...prev[type],
         [section]: section === 'costReduction' && index !== undefined
           ? {
-              ...prev[activeAnalysis][section],
-              processInstances: prev[activeAnalysis][section].processInstances.map((instance, i) =>
+              ...prev[type][section],
+              processInstances: prev[type][section].processInstances.map((instance, i) =>
                 i === index ? { ...instance, [field]: value } : instance
               )
             }
           : {
-              ...prev[activeAnalysis][section],
+              ...prev[type][section],
               [field]: value
             }
+      }
+    }));
+  };
+
+  const addProcessInstance = (type: 'current' | 'future') => {
+    if (!newInstanceName.trim()) {
+      alert('Please enter an instance name');
+      return;
+    }
+
+    const newInstance = {
+      name: newInstanceName,
+      labour: 0,
+      otherDirectCost: 0,
+      factoryOverheads: 0,
+      salesOverheads: 0,
+      adminOverheads: 0
+    };
+
+    setData(prev => ({
+      ...prev,
+      current: {
+        ...prev.current,
+        costReduction: {
+          ...prev.current.costReduction,
+          processInstances: [
+            ...prev.current.costReduction.processInstances,
+            newInstance
+          ]
+        }
+      },
+      future: {
+        ...prev.future,
+        costReduction: {
+          ...prev.future.costReduction,
+          processInstances: [
+            ...prev.future.costReduction.processInstances,
+            newInstance
+          ]
+        }
+      }
+    }));
+
+    setNewInstanceName('');
+    setShowAddInstanceModal(false);
+    setAddingInstanceType(null);
+  };
+
+  const deleteProcessInstance = (type: 'current' | 'future', index: number) => {
+    setData(prev => ({
+      ...prev,
+      current: {
+        ...prev.current,
+        costReduction: {
+          ...prev.current.costReduction,
+          processInstances: prev.current.costReduction.processInstances.filter((_, i) => i !== index)
+        }
+      },
+      future: {
+        ...prev.future,
+        costReduction: {
+          ...prev.future.costReduction,
+          processInstances: prev.future.costReduction.processInstances.filter((_, i) => i !== index)
+        }
+      }
+    }));
+  };
+
+  const addCustomSection = () => {
+    if (!tempSectionName.trim()) {
+      alert('Please enter a section name');
+      return;
+    }
+
+    if (tempSectionFields.length === 0) {
+      alert('Please add at least one field');
+      return;
+    }
+
+    if (!tempFormula.trim()) {
+      alert('Please enter a formula');
+      return;
+    }
+
+    const newCustomSection: CustomSection = {
+      id: `custom-${nextSectionId}`,
+      name: tempSectionName,
+      fields: tempSectionFields.map(f => ({ name: f.name, value: 0 })),
+      formula: tempFormula
+    };
+
+    setData(prev => ({
+      ...prev,
+      current: {
+        ...prev.current,
+        customSections: [...prev.current.customSections, newCustomSection]
+      },
+      future: {
+        ...prev.future,
+        customSections: [...prev.future.customSections, newCustomSection]
+      }
+    }));
+
+    setNextSectionId(nextSectionId + 1);
+    resetCustomSectionModal();
+  };
+
+  const resetCustomSectionModal = () => {
+    setShowAddSectionModal(false);
+    setCustomSectionStep('name');
+    setTempSectionName('');
+    setTempSectionFields([]);
+    setTempFieldName('');
+    setTempFormula('');
+  };
+
+  const addFieldToCustomSection = () => {
+    if (!tempFieldName.trim()) {
+      alert('Please enter a field name');
+      return;
+    }
+
+    if (tempSectionFields.some(f => f.name.toLowerCase() === tempFieldName.toLowerCase())) {
+      alert('Field name already exists');
+      return;
+    }
+
+    setTempSectionFields([...tempSectionFields, { name: tempFieldName }]);
+    setTempFieldName('');
+  };
+
+  const removeFieldFromCustomSection = (index: number) => {
+    setTempSectionFields(tempSectionFields.filter((_, i) => i !== index));
+  };
+
+  const updateCustomSectionField = (type: 'current' | 'future', sectionId: string, fieldName: string, value: number) => {
+    setData(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        customSections: prev[type].customSections.map(section =>
+          section.id === sectionId
+            ? {
+                ...section,
+                fields: section.fields.map(f =>
+                  f.name === fieldName ? { ...f, value } : f
+                )
+              }
+            : section
+        )
+      }
+    }));
+  };
+
+  const calculateCustomSectionValue = (section: CustomSection): number => {
+    try {
+      let formula = section.formula;
+      section.fields.forEach(field => {
+        formula = formula.replace(new RegExp(`\\{${field.name}\\}`, 'g'), field.value.toString());
+      });
+      const result = Function('"use strict"; return (' + formula + ')')();
+      return typeof result === 'number' ? result : 0;
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  const deleteCustomSection = (sectionId: string) => {
+    setData(prev => ({
+      ...prev,
+      current: {
+        ...prev.current,
+        customSections: prev.current.customSections.filter(s => s.id !== sectionId)
+      },
+      future: {
+        ...prev.future,
+        customSections: prev.future.customSections.filter(s => s.id !== sectionId)
       }
     }));
   };
@@ -810,53 +1027,37 @@ const FinancialAnalysis: React.FC = () => {
         <div className="mb-8 flex justify-center">
           <div className="bg-white rounded-lg shadow-md p-2 flex flex-wrap gap-2">
             <button
-              onClick={() => {
-                setActiveAnalysis('current');
-                setShowComparison(false);
-              }}
+              onClick={() => setShowRoiSummary(false)}
               className={`px-6 py-3 rounded-md font-semibold transition-all ${
-                activeAnalysis === 'current' && !showComparison
+                !showRoiSummary
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-blue-600 hover:bg-blue-50'
               }`}
             >
-              Current State Analysis
-            </button>
-            <button
-              onClick={() => {
-                setActiveAnalysis('future');
-                setShowComparison(false);
-              }}
-              className={`px-6 py-3 rounded-md font-semibold transition-all ${
-                activeAnalysis === 'future' && !showComparison
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-purple-600 hover:bg-purple-50'
-              }`}
-            >
-              Future State Analysis
+              State Analysis
             </button>
             {canShowComparison && (
               <button
-                onClick={() => setShowComparison(true)}
+                onClick={() => setShowRoiSummary(true)}
                 className={`px-6 py-3 rounded-md font-semibold transition-all ${
-                  showComparison
+                  showRoiSummary
                     ? 'bg-green-600 text-white shadow-md'
                     : 'text-green-600 hover:bg-green-50'
                 }`}
               >
-                Compare Both
+                RoI Summary
               </button>
             )}
           </div>
         </div>
 
         {/* Main Content */}
-        {showComparison ? (
-          /* Comparison View */
+        {showRoiSummary ? (
+          /* RoI Summary View */
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                Current vs Future State Comparison
+                RoI Summary
               </h2>
               
               {(() => {
@@ -965,6 +1166,58 @@ const FinancialAnalysis: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Custom Sections Comparison */}
+                    {data.current.customSections.length > 0 && (
+                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-6">
+                        <h3 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
+                          <Calculator className="w-6 h-6 mr-2" />
+                          Custom Sections
+                        </h3>
+                        <div className="space-y-4">
+                          {data.current.customSections.map((section) => {
+                            const metrics = calculateConsolidatedMetrics();
+                            const currentValue = calculateCustomSectionValue(section);
+                            const futureValue = calculateCustomSectionValue(
+                              data.future.customSections.find(s => s.id === section.id)!
+                            );
+                            const yearlySaving = (currentValue - futureValue) * 12;
+                            
+                            return (
+                              <div key={section.id} className="bg-white rounded-lg p-4">
+                                <h4 className="font-semibold text-gray-800 mb-3">{section.name}</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                  <div className="text-center">
+                                    <div className="text-sm text-gray-600 mb-1">Current Value</div>
+                                    <div className="text-xl font-bold text-blue-600">
+                                      ${currentValue.toLocaleString(undefined, {maximumFractionDigits: 2})}
+                                    </div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-sm text-gray-600 mb-1">Future Value</div>
+                                    <div className="text-xl font-bold text-purple-600">
+                                      ${futureValue.toLocaleString(undefined, {maximumFractionDigits: 2})}
+                                    </div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-sm text-gray-600 mb-1">Monthly Saving</div>
+                                    <div className="text-xl font-bold text-green-600">
+                                      ${((currentValue - futureValue)).toLocaleString(undefined, {maximumFractionDigits: 2})}
+                                    </div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-sm text-gray-600 mb-1">Annual Saving</div>
+                                    <div className="text-xl font-bold text-green-700">
+                                      ${yearlySaving.toLocaleString(undefined, {maximumFractionDigits: 2})}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Consolidated ROI Metrics */}
                     <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg p-6">
                       <h3 className="text-xl font-semibold text-indigo-900 mb-4 text-center">
@@ -1022,59 +1275,166 @@ const FinancialAnalysis: React.FC = () => {
             
             {expandedSections.includes('costReduction') && (
               <div className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {data[activeAnalysis].costReduction.processInstances.map((instance, index) => (
-                    <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                      <h4 className="font-semibold mb-3 text-gray-800">Process Instance {index + 1}</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Labour ($)</label>
-                          <input
-                            type="number"
-                            value={instance.labour}
-                            onChange={(e) => updateData('costReduction', 'labour', Number(e.target.value), index)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Other Direct Cost ($)</label>
-                          <input
-                            type="number"
-                            value={instance.otherDirectCost}
-                            onChange={(e) => updateData('costReduction', 'otherDirectCost', Number(e.target.value), index)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Factory Overheads ($)</label>
-                          <input
-                            type="number"
-                            value={instance.factoryOverheads}
-                            onChange={(e) => updateData('costReduction', 'factoryOverheads', Number(e.target.value), index)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Sales Overheads ($)</label>
-                          <input
-                            type="number"
-                            value={instance.salesOverheads}
-                            onChange={(e) => updateData('costReduction', 'salesOverheads', Number(e.target.value), index)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Admin Overheads ($)</label>
-                          <input
-                            type="number"
-                            value={instance.adminOverheads}
-                            onChange={(e) => updateData('costReduction', 'adminOverheads', Number(e.target.value), index)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  {/* Current State */}
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-blue-700 pb-2 border-b-2 border-blue-400 flex-1">Current State</h3>
+                      <button
+                        onClick={() => {
+                          setAddingInstanceType('current');
+                          setShowAddInstanceModal(true);
+                        }}
+                        className="ml-2 px-3 py-1 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-all"
+                      >
+                        + Add Instance
+                      </button>
                     </div>
-                  ))}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {data.current.costReduction.processInstances.map((instance, index) => (
+                        <div key={index} className="border rounded-lg p-4 bg-blue-50">
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-semibold text-gray-800">{instance.name || `Instance ${index + 1}`}</h4>
+                            {index > 3 && (
+                              <button
+                                onClick={() => deleteProcessInstance('current', index)}
+                                className="text-red-500 hover:text-red-700 text-sm font-medium"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Labour ($)</label>
+                              <input
+                                type="number"
+                                value={instance.labour}
+                                onChange={(e) => updateData('costReduction', 'labour', Number(e.target.value), 'current', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Other Direct ($)</label>
+                              <input
+                                type="number"
+                                value={instance.otherDirectCost}
+                                onChange={(e) => updateData('costReduction', 'otherDirectCost', Number(e.target.value), 'current', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Factory OH ($)</label>
+                              <input
+                                type="number"
+                                value={instance.factoryOverheads}
+                                onChange={(e) => updateData('costReduction', 'factoryOverheads', Number(e.target.value), 'current', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Sales OH ($)</label>
+                              <input
+                                type="number"
+                                value={instance.salesOverheads}
+                                onChange={(e) => updateData('costReduction', 'salesOverheads', Number(e.target.value), 'current', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block font-medium text-gray-700 mb-1">Admin OH ($)</label>
+                              <input
+                                type="number"
+                                value={instance.adminOverheads}
+                                onChange={(e) => updateData('costReduction', 'adminOverheads', Number(e.target.value), 'current', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Future State */}
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-purple-700 pb-2 border-b-2 border-purple-400 flex-1">Future State</h3>
+                      <button
+                        onClick={() => {
+                          setAddingInstanceType('future');
+                          setShowAddInstanceModal(true);
+                        }}
+                        className="ml-2 px-3 py-1 bg-purple-500 text-white text-sm rounded-md hover:bg-purple-600 transition-all"
+                      >
+                        + Add Instance
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {data.future.costReduction.processInstances.map((instance, index) => (
+                        <div key={index} className="border rounded-lg p-4 bg-purple-50">
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-semibold text-gray-800">{instance.name || `Instance ${index + 1}`}</h4>
+                            {index > 3 && (
+                              <button
+                                onClick={() => deleteProcessInstance('future', index)}
+                                className="text-red-500 hover:text-red-700 text-sm font-medium"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Labour ($)</label>
+                              <input
+                                type="number"
+                                value={instance.labour}
+                                onChange={(e) => updateData('costReduction', 'labour', Number(e.target.value), 'future', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Other Direct ($)</label>
+                              <input
+                                type="number"
+                                value={instance.otherDirectCost}
+                                onChange={(e) => updateData('costReduction', 'otherDirectCost', Number(e.target.value), 'future', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Factory OH ($)</label>
+                              <input
+                                type="number"
+                                value={instance.factoryOverheads}
+                                onChange={(e) => updateData('costReduction', 'factoryOverheads', Number(e.target.value), 'future', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-gray-700 mb-1">Sales OH ($)</label>
+                              <input
+                                type="number"
+                                value={instance.salesOverheads}
+                                onChange={(e) => updateData('costReduction', 'salesOverheads', Number(e.target.value), 'future', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block font-medium text-gray-700 mb-1">Admin OH ($)</label>
+                              <input
+                                type="number"
+                                value={instance.adminOverheads}
+                                onChange={(e) => updateData('costReduction', 'adminOverheads', Number(e.target.value), 'future', index)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1082,35 +1442,51 @@ const FinancialAnalysis: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Other Fixed Cost per Month ($)</label>
                     <input
                       type="number"
-                      value={data[activeAnalysis].costReduction.otherFixedCostPerMonth}
-                      onChange={(e) => updateData('costReduction', 'otherFixedCostPerMonth', Number(e.target.value))}
+                      value={data.current.costReduction.otherFixedCostPerMonth}
+                      onChange={(e) => updateData('costReduction', 'otherFixedCostPerMonth', Number(e.target.value), 'current')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-blue-700 mb-1">Total Monthly Cost</label>
+                    <label className="block text-sm font-medium text-blue-700 mb-1">Total Monthly Cost (Current)</label>
                     <div className="text-2xl font-bold text-blue-800">
-                      ${calculateTotalMonthlyCost(data[activeAnalysis]).toLocaleString()}
+                      ${calculateTotalMonthlyCost(data.current).toLocaleString()}
                     </div>
                   </div>
                 </div>
 
-                {activeAnalysis === 'current' && (
-                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <label className="block text-sm font-medium text-green-700 mb-1">Monthly Saving</label>
-                      <div className="text-xl font-bold text-green-800">
-                        ${calculateMonthlySaving().toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <label className="block text-sm font-medium text-green-700 mb-1">Yearly Saving</label>
-                      <div className="text-xl font-bold text-green-800">
-                        ${(calculateMonthlySaving() * 12).toLocaleString()}
-                      </div>
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Other Fixed Cost per Month ($)</label>
+                    <input
+                      type="number"
+                      value={data.future.costReduction.otherFixedCostPerMonth}
+                      onChange={(e) => updateData('costReduction', 'otherFixedCostPerMonth', Number(e.target.value), 'future')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <label className="block text-sm font-medium text-purple-700 mb-1">Total Monthly Cost (Future)</label>
+                    <div className="text-2xl font-bold text-purple-800">
+                      ${calculateTotalMonthlyCost(data.future).toLocaleString()}
                     </div>
                   </div>
-                )}
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <label className="block text-sm font-medium text-green-700 mb-1">Monthly Saving</label>
+                    <div className="text-xl font-bold text-green-800">
+                      ${calculateMonthlySaving().toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <label className="block text-sm font-medium text-green-700 mb-1">Yearly Saving</label>
+                    <div className="text-xl font-bold text-green-800">
+                      ${(calculateMonthlySaving() * 12).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1133,67 +1509,86 @@ const FinancialAnalysis: React.FC = () => {
             
             {expandedSections.includes('qualityDefect') && (
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  {/* Current State */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Units Processed per Month</label>
-                    <input
-                      type="number"
-                      value={data[activeAnalysis].qualityDefect.unitsProcessed}
-                      onChange={(e) => updateData('qualityDefect', 'unitsProcessed', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      disabled={activeAnalysis === 'future'}
-                    />
+                    <h3 className="text-lg font-bold text-blue-700 mb-4 pb-2 border-b-2 border-blue-400">Current State</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Units Processed per Month</label>
+                        <input
+                          type="number"
+                          value={data.current.qualityDefect.unitsProcessed}
+                          onChange={(e) => updateData('qualityDefect', 'unitsProcessed', Number(e.target.value), 'current')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Defect Percentage (%)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={data.current.qualityDefect.defectPercentage}
+                          onChange={(e) => updateData('qualityDefect', 'defectPercentage', Number(e.target.value), 'current')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Per Unit Cost ($)</label>
+                        <input
+                          type="number"
+                          value={data.current.qualityDefect.perUnitCost}
+                          onChange={(e) => updateData('qualityDefect', 'perUnitCost', Number(e.target.value), 'current')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Future State */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Defect Percentage (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={data[activeAnalysis].qualityDefect.defectPercentage}
-                      onChange={(e) => updateData('qualityDefect', 'defectPercentage', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Per Unit Cost ($)</label>
-                    <input
-                      type="number"
-                      value={data[activeAnalysis].qualityDefect.perUnitCost}
-                      onChange={(e) => updateData('qualityDefect', 'perUnitCost', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      disabled={activeAnalysis === 'future'}
-                    />
+                    <h3 className="text-lg font-bold text-purple-700 mb-4 pb-2 border-b-2 border-purple-400">Future State</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Units Processed per Month</label>
+                        <input
+                          type="number"
+                          value={data.future.qualityDefect.unitsProcessed}
+                          onChange={(e) => updateData('qualityDefect', 'unitsProcessed', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Defect Percentage (%)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={data.future.qualityDefect.defectPercentage}
+                          onChange={(e) => updateData('qualityDefect', 'defectPercentage', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Per Unit Cost ($)</label>
+                        <input
+                          type="number"
+                          value={data.future.qualityDefect.perUnitCost}
+                          onChange={(e) => updateData('qualityDefect', 'perUnitCost', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Special Deduction ($ - salvage value, etc.)</label>
+                        <input
+                          type="number"
+                          value={data.future.qualityDefect.specialDeduction}
+                          onChange={(e) => updateData('qualityDefect', 'specialDeduction', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {activeAnalysis === 'future' && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Special Deduction ($ - salvage value, etc.)</label>
-                    <input
-                      type="number"
-                      value={data[activeAnalysis].qualityDefect.specialDeduction}
-                      onChange={(e) => updateData('qualityDefect', 'specialDeduction', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                )}
-
-                {activeAnalysis === 'current' && (
-                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <label className="block text-sm font-medium text-green-700 mb-1">Net Monthly Saving</label>
-                      <div className="text-xl font-bold text-green-800">
-                        ${calculateQualityDefectSaving().toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <label className="block text-sm font-medium text-green-700 mb-1">Yearly Saving</label>
-                      <div className="text-xl font-bold text-green-800">
-                        ${(calculateQualityDefectSaving() * 12 + data.future.qualityDefect.specialDeduction * 12).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -1216,67 +1611,169 @@ const FinancialAnalysis: React.FC = () => {
             
             {expandedSections.includes('efficiency') && (
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  {/* Current State */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Units Processed {activeAnalysis === 'current' ? '(Before)' : '(After)'}
-                    </label>
-                    <input
-                      type="number"
-                      value={activeAnalysis === 'current' ? 
-                        data[activeAnalysis].efficiency.unitsProcessedBefore : 
-                        data[activeAnalysis].efficiency.unitsProcessedAfter
-                      }
-                      onChange={(e) => updateData('efficiency', 
-                        activeAnalysis === 'current' ? 'unitsProcessedBefore' : 'unitsProcessedAfter', 
-                        Number(e.target.value)
-                      )}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Contribution per Unit ($)</label>
-                    <input
-                      type="number"
-                      value={data[activeAnalysis].efficiency.contributionPerUnit}
-                      onChange={(e) => updateData('efficiency', 'contributionPerUnit', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      disabled={activeAnalysis === 'future'}
-                    />
-                  </div>
-                  {activeAnalysis === 'future' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Additional Cost ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={data[activeAnalysis].efficiency.additionalCost}
-                        onChange={(e) => updateData('efficiency', 'additionalCost', Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
+                    <h3 className="text-lg font-bold text-blue-700 mb-4 pb-2 border-b-2 border-blue-400">Current State</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Units Processed per Month (Before)</label>
+                        <input
+                          type="number"
+                          value={data.current.efficiency.unitsProcessedBefore}
+                          onChange={(e) => updateData('efficiency', 'unitsProcessedBefore', Number(e.target.value), 'current')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Contribution per Unit ($)</label>
+                        <input
+                          type="number"
+                          value={data.current.efficiency.contributionPerUnit}
+                          onChange={(e) => updateData('efficiency', 'contributionPerUnit', Number(e.target.value), 'current')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {activeAnalysis === 'current' && (
-                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <label className="block text-sm font-medium text-purple-700 mb-1">Net Monthly Saving</label>
-                      <div className="text-xl font-bold text-purple-800">
-                        ${calculateEfficiencySaving().toLocaleString()}
+                  {/* Future State */}
+                  <div>
+                    <h3 className="text-lg font-bold text-purple-700 mb-4 pb-2 border-b-2 border-purple-400">Future State</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Units Processed per Month (After)</label>
+                        <input
+                          type="number"
+                          value={data.future.efficiency.unitsProcessedAfter}
+                          onChange={(e) => updateData('efficiency', 'unitsProcessedAfter', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
                       </div>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <label className="block text-sm font-medium text-purple-700 mb-1">Yearly Saving</label>
-                      <div className="text-xl font-bold text-purple-800">
-                        ${(calculateEfficiencySaving() * 12).toLocaleString()}
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Contribution per Unit ($)</label>
+                        <input
+                          type="number"
+                          value={data.future.efficiency.contributionPerUnit}
+                          onChange={(e) => updateData('efficiency', 'contributionPerUnit', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Additional Cost ($)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={data.future.efficiency.additionalCost}
+                          onChange={(e) => updateData('efficiency', 'additionalCost', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
+
+          {/* Custom Sections */}
+          {data.current.customSections.map((section) => (
+            <div key={section.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection(section.id)}
+                className="w-full px-6 py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold flex items-center justify-between hover:from-teal-700 hover:to-teal-800 transition-all"
+              >
+                <div className="flex items-center">
+                  <TrendingUp className="w-5 h-5 mr-2" />
+                  {section.name}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteCustomSection(section.id);
+                    }}
+                    className="text-red-300 hover:text-red-100 text-sm"
+                  >
+                    Delete
+                  </button>
+                  {expandedSections.includes(section.id) ? 
+                    <ChevronDown className="w-5 h-5" /> : 
+                    <ChevronRight className="w-5 h-5" />
+                  }
+                </div>
+              </button>
+
+              {expandedSections.includes(section.id) && (
+                <div className="p-6">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    {/* Current State */}
+                    <div>
+                      <h3 className="text-lg font-bold text-blue-700 mb-4 pb-2 border-b-2 border-blue-400">Current State</h3>
+                      <div className="space-y-3">
+                        {section.fields.map((field, idx) => {
+                          const currentField = data.current.customSections.find(s => s.id === section.id)?.fields[idx];
+                          return (
+                            <div key={idx}>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">{field.name}</label>
+                              <input
+                                type="number"
+                                value={currentField?.value || 0}
+                                onChange={(e) => updateCustomSectionField('current', section.id, field.name, Number(e.target.value))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          );
+                        })}
+                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-1">Formula: {section.formula}</p>
+                          <p className="text-lg font-bold text-blue-700">
+                            Result: ${calculateCustomSectionValue(data.current.customSections.find(s => s.id === section.id)!).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Future State */}
+                    <div>
+                      <h3 className="text-lg font-bold text-purple-700 mb-4 pb-2 border-b-2 border-purple-400">Future State</h3>
+                      <div className="space-y-3">
+                        {section.fields.map((field, idx) => {
+                          const futureField = data.future.customSections.find(s => s.id === section.id)?.fields[idx];
+                          return (
+                            <div key={idx}>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">{field.name}</label>
+                              <input
+                                type="number"
+                                value={futureField?.value || 0}
+                                onChange={(e) => updateCustomSectionField('future', section.id, field.name, Number(e.target.value))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                          );
+                        })}
+                        <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-1">Formula: {section.formula}</p>
+                          <p className="text-lg font-bold text-purple-700">
+                            Result: ${calculateCustomSectionValue(data.future.customSections.find(s => s.id === section.id)!).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Add Custom Section Button */}
+          <button
+            onClick={() => setShowAddSectionModal(true)}
+            className="w-full px-6 py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 font-semibold hover:border-gray-400 hover:text-gray-700 transition-all flex items-center justify-center"
+          >
+            <TrendingUp className="w-5 h-5 mr-2" />
+            + Add Custom Section
+          </button>
 
           {/* Automation Metrics Section */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -1296,24 +1793,55 @@ const FinancialAnalysis: React.FC = () => {
             
             {expandedSections.includes('automationMetrics') && (
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-6">
+                  {/* Current State */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">OPEX of Automation ($)</label>
-                    <input
-                      type="number"
-                      value={data[activeAnalysis].automationMetrics.opexAutomation}
-                      onChange={(e) => updateData('automationMetrics', 'opexAutomation', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                    <h3 className="text-lg font-bold text-blue-700 mb-4 pb-2 border-b-2 border-blue-400">Current State</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">OPEX of Automation ($)</label>
+                        <input
+                          type="number"
+                          value={data.current.automationMetrics.opexAutomation}
+                          onChange={(e) => updateData('automationMetrics', 'opexAutomation', Number(e.target.value), 'current')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">CAPEX of Automation ($)</label>
+                        <input
+                          type="number"
+                          value={data.current.automationMetrics.capexAutomation}
+                          onChange={(e) => updateData('automationMetrics', 'capexAutomation', Number(e.target.value), 'current')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Future State */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CAPEX of Automation ($)</label>
-                    <input
-                      type="number"
-                      value={data[activeAnalysis].automationMetrics.capexAutomation}
-                      onChange={(e) => updateData('automationMetrics', 'capexAutomation', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                    <h3 className="text-lg font-bold text-purple-700 mb-4 pb-2 border-b-2 border-purple-400">Future State</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">OPEX of Automation ($)</label>
+                        <input
+                          type="number"
+                          value={data.future.automationMetrics.opexAutomation}
+                          onChange={(e) => updateData('automationMetrics', 'opexAutomation', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">CAPEX of Automation ($)</label>
+                        <input
+                          type="number"
+                          value={data.future.automationMetrics.capexAutomation}
+                          onChange={(e) => updateData('automationMetrics', 'capexAutomation', Number(e.target.value), 'future')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1366,6 +1894,188 @@ const FinancialAnalysis: React.FC = () => {
             Download Report (PDF)
           </button>
         </div>
+
+        {/* Add Instance Modal */}
+        {showAddInstanceModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">
+                Add New Instance ({addingInstanceType === 'current' ? 'Current State' : 'Future State'})
+              </h3>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Instance Name</label>
+                <input
+                  type="text"
+                  value={newInstanceName}
+                  onChange={(e) => setNewInstanceName(e.target.value)}
+                  placeholder="e.g., Instance 5, Process Module A"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                You can enter labor, costs, and overhead values after creating the instance. The instance will be included in all calculations.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAddInstanceModal(false);
+                    setNewInstanceName('');
+                    setAddingInstanceType(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => addProcessInstance(addingInstanceType!)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                >
+                  Add Instance
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Custom Section Modal */}
+        {showAddSectionModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+              {customSectionStep === 'name' && (
+                <>
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">Step 1: Section Name</h3>
+                  <input
+                    type="text"
+                    value={tempSectionName}
+                    onChange={(e) => setTempSectionName(e.target.value)}
+                    placeholder="e.g., Energy Cost Reduction, Training Impact"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                    autoFocus
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={resetCustomSectionModal}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => setCustomSectionStep('fields')}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                    >
+                      Next: Add Fields
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {customSectionStep === 'fields' && (
+                <>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Step 2: Add Fields</h3>
+                  <p className="text-sm text-gray-600 mb-4">Add fields that will be used in your ROI formula. Example: "Monthly Energy Cost", "Efficiency Factor"</p>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Field Name</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={tempFieldName}
+                        onChange={(e) => setTempFieldName(e.target.value)}
+                        placeholder="e.g., Monthly_Cost"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                      <button
+                        onClick={addFieldToCustomSection}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                      >
+                        + Add Field
+                      </button>
+                    </div>
+                  </div>
+
+                  {tempSectionFields.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="font-semibold text-gray-800 mb-2">Fields ({tempSectionFields.length})</h4>
+                      <div className="space-y-2">
+                        {tempSectionFields.map((field, idx) => (
+                          <div key={idx} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                            <span className="text-gray-700">{idx + 1}. {field.name}</span>
+                            <button
+                              onClick={() => removeFieldFromCustomSection(idx)}
+                              className="text-red-500 hover:text-red-700 text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setCustomSectionStep('name')}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => setCustomSectionStep('formula')}
+                      disabled={tempSectionFields.length === 0}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
+                    >
+                      Next: Formula
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {customSectionStep === 'formula' && (
+                <>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Step 3: ROI Formula</h3>
+                  <p className="text-sm text-gray-600 mb-4">Enter a formula using field names in curly braces. Example: {`{Monthly_Cost} * 12 + {Additional_Expense}`}</p>
+                  
+                  <div className="mb-4 p-3 bg-gray-50 rounded">
+                    <h4 className="font-semibold text-gray-800 mb-2">Available Fields:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {tempSectionFields.map((field, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded">
+                          {`{${field.name}}`}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={tempFormula}
+                    onChange={(e) => setTempFormula(e.target.value)}
+                    placeholder={`e.g., {${tempSectionFields.length > 0 ? tempSectionFields[0].name : 'Field'}} * 12`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 font-mono text-sm"
+                    rows={3}
+                    autoFocus
+                  />
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setCustomSectionStep('fields')}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={addCustomSection}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                    >
+                      Create Section
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
